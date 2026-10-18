@@ -16,7 +16,9 @@
     "cli:pack": "npm --prefix cli run pack:cli",
     "cli:publish": "npm --prefix cli run publish:cli",
     "start:rust": "cargo run --release --manifest-path rust/Cargo.toml",
-    "build:rust": "cargo build --release --manifest-path rust/Cargo.toml"
+    "start:full": "./start-full.sh",
+    "build:rust": "cargo build --release --manifest-path rust/Cargo.toml",
+    "build:rust-frontend": "NINEROUTER_RUST_ENABLED=true next build --webpack && node scripts/copy-standalone-assets.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

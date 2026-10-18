@@ -1,6 +1,6 @@
 # 9Router Rust
 
-9Router Rust is a standalone, runnable model gateway with a built-in local management page. It has no Headroom integration.
+9Router Rust is a Rust model gateway with a built-in local management page. The existing Node/Next.js app can remain the frontend and route `/v1` traffic to Rust. It has no Headroom integration.
 
 The Rust service includes:
 
@@ -12,7 +12,7 @@ The Rust service includes:
 - Recent request log and a browser UI at `/`
 - JSON and multipart request forwarding, including model rewriting
 
-The existing Node/Next.js app remains the frontend and continues to serve its dashboard. Rust opens its existing `DATA_DIR/db/data.sqlite` database, so the two processes share provider connections, custom provider nodes, combos, and API keys. The Rust routing implementation is still in progress: provider OAuth refresh, account selection and pool behavior, and the app's cross-protocol/media/CLI integrations are not yet fully ported. OpenAI-style clients need OpenAI-compatible upstreams; Anthropic clients use the native Messages API. Credentials are stored in the shared SQLite database, so protect its data directory.
+The existing Node/Next.js app remains the frontend and continues to serve its dashboard. Rust opens its existing `DATA_DIR/db/data.sqlite` database, so the two processes share provider connections, custom provider nodes, combos, and API keys. Provider OAuth refresh, account pool selection, cross-protocol/media/CLI integrations, and restricted-key allow lists are still being ported; do not send those workloads to Rust until the required behavior is implemented. OpenAI-style clients need OpenAI-compatible upstreams; Anthropic clients use the native Messages API. Credentials are stored in the shared SQLite database, so protect its data directory.
 
 ## Run locally
 
@@ -23,6 +23,8 @@ cargo run --release --manifest-path rust/Cargo.toml
 ```
 
 Or use `./start-rust.sh`. The service binds to `127.0.0.1:20127`. The first build downloads Rust dependencies. Set these environment variables as needed:
+
+To keep Node as the dashboard frontend and route inference requests through its streaming proxy to Rust, build with `npm run build:rust-frontend`, then run `./start-full.sh`. The build routes `/v1`, `/api/v1`, `/responses`, `/codex`, and `/systemone` through Node to Rust; Node continues to handle dashboard APIs and pages. `start-full.sh` starts Node on port 20127 and Rust on port 20128. Set `NINEROUTER_RUST_URL` if Rust listens elsewhere. Since the full provider/translator port is still in progress, enable this build only when Rust supports the client traffic you intend to send.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |

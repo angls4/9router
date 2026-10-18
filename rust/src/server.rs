@@ -44,6 +44,8 @@ pub fn router(state: AppState) -> Router {
         .route("/admin/requests", get(list_requests))
         .route("/v1/models", get(list_models))
         .route("/api/v1/models", get(list_models))
+        .route("/v1", any(proxy_root))
+        .route("/api/v1", any(proxy_root))
         .route("/api/v1/{*path}", any(proxy))
         .route("/v1/{*path}", any(proxy))
         .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
@@ -173,6 +175,7 @@ async fn list_models(
 ) -> Result<Json<Value>, ApiError> {
     authorize(&state, &headers).await?;
     authorize_stored_key(&state, &headers).await?;
+    let restricted_allow = restricted_key_allow(&state, &headers).await?;
     let mut data = Vec::new();
     for provider in store::list_providers(&state.db)
         .await?
@@ -180,7 +183,14 @@ async fn list_models(
         .filter(|p| p.enabled != 0)
     {
         for model in store::models(&provider) {
-            data.push(json!({"id":format!("{}/{}",provider.id,model),"object":"model","owned_by":provider.id}));
+            let model_id = format!("{}/{}", provider.id, model);
+            if restricted_allow.as_ref().is_none_or(|allow| {
+                allow
+                    .iter()
+                    .any(|entry| entry.eq_ignore_ascii_case(&model_id))
+            }) {
+                data.push(json!({"id":model_id,"object":"model","owned_by":provider.id}));
+            }
         }
     }
     for combo in store::list_combos(&state.db)
@@ -188,7 +198,13 @@ async fn list_models(
         .into_iter()
         .filter(|c| c.enabled != 0)
     {
-        data.push(json!({"id":combo.name,"object":"model","owned_by":"9router"}));
+        if restricted_allow.as_ref().is_none_or(|allow| {
+            allow
+                .iter()
+                .any(|entry| entry.eq_ignore_ascii_case(&combo.name))
+        }) {
+            data.push(json!({"id":combo.name,"object":"model","owned_by":"9router"}));
+        }
     }
     if headers.contains_key("anthropic-version") {
         let data: Vec<Value> = data.into_iter().map(|model| {
@@ -209,6 +225,23 @@ async fn proxy(
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<Response, ApiError> {
+    if method == Method::OPTIONS {
+        let mut response = Response::new(Body::empty());
+        *response.status_mut() = StatusCode::NO_CONTENT;
+        response.headers_mut().insert(
+            header::ACCESS_CONTROL_ALLOW_ORIGIN,
+            HeaderValue::from_static("*"),
+        );
+        response.headers_mut().insert(
+            header::ACCESS_CONTROL_ALLOW_METHODS,
+            HeaderValue::from_static("GET, POST, PUT, PATCH, DELETE, OPTIONS"),
+        );
+        response.headers_mut().insert(
+            header::ACCESS_CONTROL_ALLOW_HEADERS,
+            HeaderValue::from_static("*"),
+        );
+        return Ok(response);
+    }
     authorize(&state, &headers).await?;
     authorize_stored_key(&state, &headers).await?;
     let content_type = headers
@@ -245,8 +278,9 @@ async fn proxy(
             "Missing model (set the model field or x-9router-model header)",
         ));
     }
+    enforce_key_access(&state, &headers, &requested_model).await?;
     let payload = request_json;
-    let mut targets = resolve_targets(&state.db, &requested_model).await?;
+    let targets = resolve_targets(&state.db, &requested_model).await?;
     if targets.is_empty() {
         return Err(ApiError::not_found(
             "Model or combo has no configured targets",
@@ -254,31 +288,35 @@ async fn proxy(
     }
 
     let started = Instant::now();
-    let mut last_error: Option<String> = None;
-    while let Some(target) = targets.first().cloned() {
-        targets.remove(0);
+    let mut candidates = Vec::new();
+    let providers = store::list_providers(&state.db).await?;
+    for target in &targets {
         let (provider_id, model) = target
             .split_once('/')
             .ok_or_else(|| ApiError::bad_request("Targets must use provider/model format"))?;
-        let provider = match store::get_provider(&state.db, provider_id).await? {
-            Some(provider) => provider,
-            None => {
-                last_error = Some(format!("Provider '{provider_id}' is missing or disabled"));
+        for provider in providers
+            .iter()
+            .filter(|provider| provider.id == provider_id)
+        {
+            let available = store::models(provider);
+            if !available.is_empty() && !available.iter().any(|item| item == model) {
                 continue;
             }
-        };
-        let available = store::models(&provider);
-        if !available.is_empty() && !available.iter().any(|item| item == model) {
-            last_error = Some(format!(
-                "Model '{model}' is not configured for provider '{provider_id}'"
-            ));
-            continue;
+            candidates.push((target.clone(), provider.clone(), model.to_string()));
         }
+    }
+    let mut last_error: Option<String> = None;
+    for (index, (target, provider, model)) in candidates.iter().enumerate() {
         let mut outbound = payload.clone();
         if let Some(obj) = outbound.as_object_mut() {
             obj.insert("model".into(), Value::String(model.to_string()));
         }
-        let upstream_url = endpoint_url(&provider.base_url, &format!("v1/{path}"), uri.query())?;
+        let upstream_path = format!(
+            "{}/{}",
+            provider.api_path_prefix.trim_matches('/'),
+            path.trim_start_matches('/')
+        );
+        let upstream_url = endpoint_url(&provider.base_url, &upstream_path, uri.query())?;
         let mut outbound_body = body.to_vec();
         if let Some(range) = &multipart_range {
             outbound_body.splice(range.clone(), model.bytes());
@@ -297,7 +335,7 @@ async fn proxy(
         {
             Ok(upstream) => {
                 let status = upstream.status().as_u16();
-                if is_retryable(status) && !targets.is_empty() {
+                if is_retryable(status) && index + 1 < candidates.len() {
                     last_error = Some(format!("Upstream returned HTTP {status}"));
                     let _ = upstream.bytes().await;
                     continue;
@@ -328,6 +366,24 @@ async fn proxy(
     Err(ApiError::upstream(
         last_error.unwrap_or_else(|| "All configured targets failed".into()),
     ))
+}
+
+async fn proxy_root(
+    State(state): State<AppState>,
+    OriginalUri(uri): OriginalUri,
+    method: Method,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Response, ApiError> {
+    proxy(
+        State(state),
+        OriginalUri(uri),
+        Path(String::new()),
+        method,
+        headers,
+        body,
+    )
+    .await
 }
 
 fn multipart_field_range(
@@ -528,6 +584,75 @@ async fn authorize_stored_key(state: &AppState, headers: &HeaderMap) -> Result<(
     }
 }
 
+async fn enforce_key_access(
+    state: &AppState,
+    headers: &HeaderMap,
+    requested: &str,
+) -> Result<(), ApiError> {
+    let key = headers
+        .get(header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .or_else(|| headers.get("x-api-key").and_then(|v| v.to_str().ok()))
+        .or_else(|| headers.get("x-goog-api-key").and_then(|v| v.to_str().ok()));
+    let Some(key) = key else {
+        return Ok(());
+    };
+    let row: Option<(i64, Option<String>)> = sqlx::query_as(
+        "SELECT accessRestricted, accessAllow FROM apiKeys WHERE key=? AND isActive=1",
+    )
+    .bind(key)
+    .fetch_optional(&state.db)
+    .await?;
+    let Some((1, allow_json)) = row else {
+        return Ok(());
+    };
+    let allowed: Vec<String> = allow_json
+        .as_deref()
+        .and_then(|raw| serde_json::from_str(raw).ok())
+        .unwrap_or_default();
+    if allowed
+        .iter()
+        .any(|entry| entry.eq_ignore_ascii_case(requested))
+    {
+        return Ok(());
+    }
+    Err(ApiError::new(
+        StatusCode::FORBIDDEN,
+        format!("This API key is not allowed to use model \"{requested}\""),
+    ))
+}
+
+async fn restricted_key_allow(
+    state: &AppState,
+    headers: &HeaderMap,
+) -> Result<Option<Vec<String>>, ApiError> {
+    let key = headers
+        .get(header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .or_else(|| headers.get("x-api-key").and_then(|v| v.to_str().ok()))
+        .or_else(|| headers.get("x-goog-api-key").and_then(|v| v.to_str().ok()));
+    let Some(key) = key else {
+        return Ok(None);
+    };
+    let row: Option<(i64, Option<String>)> = sqlx::query_as(
+        "SELECT accessRestricted, accessAllow FROM apiKeys WHERE key=? AND isActive=1",
+    )
+    .bind(key)
+    .fetch_optional(&state.db)
+    .await?;
+    let Some((1, allow_json)) = row else {
+        return Ok(None);
+    };
+    Ok(Some(
+        allow_json
+            .as_deref()
+            .and_then(|raw| serde_json::from_str(raw).ok())
+            .unwrap_or_default(),
+    ))
+}
+
 fn endpoint_url(base: &str, path: &str, query: Option<&str>) -> Result<String, ApiError> {
     let parsed = reqwest::Url::parse(base.trim_end_matches('/'))
         .map_err(|_| ApiError::bad_request("Provider baseUrl must be an absolute HTTP(S) URL"))?;
@@ -546,12 +671,32 @@ fn endpoint_url(base: &str, path: &str, query: Option<&str>) -> Result<String, A
             "Put provider credentials in the API key field, not the baseUrl",
         ));
     }
+    let base_path = parsed.path().trim_end_matches('/');
+    let route_path = path.trim_start_matches('/');
+    let base_suffix = base_path.trim_start_matches('/');
     let mut url = base.trim_end_matches('/').to_string();
-    if url.ends_with("/v1") && path.starts_with("v1/") {
-        url.truncate(url.len() - 3);
+    if !base_suffix.is_empty() && route_path.starts_with(base_suffix) {
+        let rest = route_path
+            .strip_prefix(base_suffix)
+            .unwrap_or_default()
+            .trim_start_matches('/');
+        if !rest.is_empty() {
+            url.push('/');
+            url.push_str(rest);
+        }
+    } else if let Some(rest) = route_path
+        .strip_prefix("v1/")
+        .filter(|_| base_path.ends_with("/v1"))
+    {
+        url.push('/');
+        url.push_str(base_path.trim_start_matches('/'));
+        url.push('/');
+        url.push_str(rest);
+    } else {
+        url.push_str(base_path);
+        url.push('/');
+        url.push_str(route_path);
     }
-    url.push('/');
-    url.push_str(path.trim_start_matches('/'));
     if let Some(query) = query {
         url.push('?');
         url.push_str(query);

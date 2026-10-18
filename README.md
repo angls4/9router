@@ -1567,4 +1567,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Rust gateway
 
-A standalone Rust implementation of the 9Router gateway and local management page is available in [`rust/`](rust/README.md). It includes OpenAI-compatible streaming, native Anthropic forwarding, SQLite provider configuration, fallback combos, request history, and no Headroom feature. The existing Next.js application remains available; provider-specific OAuth, refresh, and cross-format translation have not yet been ported to Rust.
+A Rust gateway implementation is being developed in [`rust/`](rust/README.md), with the Node/Next.js application retained as the frontend. `./start-full.sh` starts both services and routes inference requests to Rust. Headroom is excluded. Provider-specific OAuth, account pools, cross-format translation, and the remaining API surfaces are still being ported.

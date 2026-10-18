@@ -6,10 +6,37 @@ pub struct Provider {
     pub id: String,
     pub name: String,
     pub base_url: String,
+    pub api_path_prefix: String,
     pub api_key: String,
     pub api_format: String,
     pub models_json: String,
     pub enabled: i64,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RegistryProvider {
+    id: String,
+    #[serde(default)]
+    aliases: Vec<String>,
+    format: String,
+    base_url: String,
+    #[serde(default)]
+    path_prefix: String,
+    #[serde(default)]
+    models: Vec<String>,
+}
+
+fn registry_providers() -> &'static [RegistryProvider] {
+    static PROVIDERS: std::sync::OnceLock<Vec<RegistryProvider>> = std::sync::OnceLock::new();
+    PROVIDERS
+        .get_or_init(|| serde_json::from_str(include_str!("../providers.json")).unwrap_or_default())
+}
+
+fn registry_provider(id: &str) -> Option<&'static RegistryProvider> {
+    registry_providers()
+        .iter()
+        .find(|provider| provider.id == id || provider.aliases.iter().any(|alias| alias == id))
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -78,7 +105,7 @@ pub async fn initialize(db: &SqlitePool) -> Result<(), sqlx::Error> {
 }
 
 pub async fn list_providers(db: &SqlitePool) -> Result<Vec<Provider>, sqlx::Error> {
-    let rows = sqlx::query("SELECT id,provider,name,authType,isActive,priority,data FROM providerConnections WHERE isActive=1 ORDER BY COALESCE(priority,999),updatedAt")
+    let rows = sqlx::query("SELECT id,provider,name,authType,isActive,priority,data FROM providerConnections WHERE isActive=1 AND authType='apikey' ORDER BY COALESCE(priority,999),updatedAt")
         .fetch_all(db).await?;
     use sqlx::Row;
     let mut providers = Vec::new();
@@ -86,7 +113,6 @@ pub async fn list_providers(db: &SqlitePool) -> Result<Vec<Provider>, sqlx::Erro
         let data: serde_json::Value =
             serde_json::from_str(&row.get::<String, _>("data")).unwrap_or_default();
         let provider = row.get::<String, _>("provider");
-        let id = row.get::<String, _>("id");
         let provider_specific = data
             .get("providerSpecificData")
             .cloned()
@@ -97,96 +123,64 @@ pub async fn list_providers(db: &SqlitePool) -> Result<Vec<Provider>, sqlx::Erro
             .and_then(serde_json::Value::as_str)
             .unwrap_or_default()
             .to_string();
+        let registry = registry_provider(&provider);
+        let base_url = if base_url.is_empty() {
+            registry
+                .map(|definition| definition.base_url.clone())
+                .unwrap_or_default()
+        } else {
+            base_url
+        };
+        let api_path_prefix = provider_specific
+            .get("apiPathPrefix")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned)
+            .or_else(|| registry.map(|definition| definition.path_prefix.clone()))
+            .unwrap_or_else(|| "/v1".into());
         let api_key = data
             .get("apiKey")
             .and_then(serde_json::Value::as_str)
             .unwrap_or_default()
             .to_string();
-        let api_format =
-            if provider == "anthropic" || provider.starts_with("anthropic-compatible-") {
-                "anthropic"
-            } else {
-                "openai"
-            }
-            .to_string();
-        let base_url = if base_url.is_empty() {
-            provider_specific
-                .get("baseUrl")
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or_default()
-                .to_string()
+        let api_format = if provider_specific
+            .get("apiFormat")
+            .and_then(serde_json::Value::as_str)
+            == Some("anthropic")
+            || provider == "anthropic"
+            || provider.starts_with("anthropic-compatible-")
+            || registry.is_some_and(|definition| definition.format == "claude")
+        {
+            "anthropic"
         } else {
-            base_url
+            "openai"
+        }
+        .to_string();
+        let configured_models = provider_specific
+            .get("enabledModels")
+            .and_then(serde_json::Value::as_array);
+        let models = if configured_models.is_some_and(|models| !models.is_empty()) {
+            configured_models.cloned().unwrap_or_default()
+        } else {
+            registry
+                .map(|definition| {
+                    definition
+                        .models
+                        .iter()
+                        .cloned()
+                        .map(serde_json::Value::String)
+                        .collect()
+                })
+                .unwrap_or_default()
         };
-        let models_json = serde_json::to_string(
-            provider_specific
-                .get("enabledModels")
-                .unwrap_or(&serde_json::Value::Array(vec![])),
-        )
-        .unwrap_or_else(|_| "[]".into());
+        let models_json = serde_json::to_string(&models).unwrap_or_else(|_| "[]".into());
         providers.push(Provider {
-            id,
+            id: provider.clone(),
             name: row.get::<Option<String>, _>("name").unwrap_or(provider),
             base_url,
+            api_path_prefix,
             api_key,
             api_format,
             models_json,
-            enabled: 1,
-        });
-    }
-    // Compatible custom provider nodes live in the same established schema.
-    let nodes = sqlx::query("SELECT id,type,name,data FROM providerNodes WHERE type IN ('openai-compatible','anthropic-compatible')")
-        .fetch_all(db).await?;
-    for row in nodes {
-        let data: serde_json::Value =
-            serde_json::from_str(&row.get::<String, _>("data")).unwrap_or_default();
-        let kind = row.get::<Option<String>, _>("type").unwrap_or_default();
-        let mut models = data
-            .get("models")
-            .cloned()
-            .unwrap_or_else(|| serde_json::json!([]));
-        let custom: Vec<String> =
-            sqlx::query_scalar("SELECT value FROM kv WHERE scope='customModels' AND key LIKE ?")
-                .bind(format!("{}|%", row.get::<String, _>("id")))
-                .fetch_all(db)
-                .await?
-                .into_iter()
-                .filter_map(|v: String| {
-                    serde_json::from_str::<serde_json::Value>(&v)
-                        .ok()?
-                        .get("id")?
-                        .as_str()
-                        .map(str::to_owned)
-                })
-                .collect();
-        if let Some(models) = models.as_array_mut() {
-            models.extend(custom.into_iter().map(serde_json::Value::String));
-        } else {
-            models = serde_json::json!(custom);
-        }
-        providers.push(Provider {
-            id: row.get("id"),
-            name: row
-                .get::<Option<String>, _>("name")
-                .unwrap_or_else(|| "Custom provider".into()),
-            base_url: data
-                .get("baseUrl")
-                .or_else(|| data.get("baseURL"))
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or_default()
-                .to_string(),
-            api_key: data
-                .get("apiKey")
-                .and_then(serde_json::Value::as_str)
-                .unwrap_or_default()
-                .to_string(),
-            api_format: if kind == "anthropic-compatible" {
-                "anthropic"
-            } else {
-                "openai"
-            }
-            .into(),
-            models_json: serde_json::to_string(&models).unwrap_or_else(|_| "[]".into()),
             enabled: 1,
         });
     }
@@ -233,19 +227,20 @@ pub async fn get_provider(db: &SqlitePool, id: &str) -> Result<Option<Provider>,
 }
 
 pub async fn save_provider(db: &SqlitePool, input: ProviderInput) -> Result<Provider, sqlx::Error> {
-    let id = match input.id.filter(|id| !id.trim().is_empty()) {
+    let requested_id = match input.id.filter(|id| !id.trim().is_empty()) {
         Some(id) => id,
         None => available_provider_id(db, &input.name).await?,
     };
     let now = chrono_stub_now();
-    let current: Option<(String, String, String, String)> =
-        sqlx::query_as("SELECT provider,authType,name,data FROM providerConnections WHERE id=?")
-            .bind(&id)
+    let current: Option<(String, String, String, String, String)> =
+        sqlx::query_as("SELECT id,provider,authType,name,data FROM providerConnections WHERE id=? OR provider=? ORDER BY COALESCE(priority,999) LIMIT 1")
+            .bind(&requested_id).bind(&requested_id)
             .fetch_optional(db)
             .await?;
-    let (provider, auth_type, name, mut data) = current
-        .map(|(p, a, n, d)| {
+    let (id, provider, auth_type, name, mut data) = current
+        .map(|(row_id, p, a, n, d)| {
             (
+                row_id,
                 p,
                 a,
                 n,
@@ -254,20 +249,24 @@ pub async fn save_provider(db: &SqlitePool, input: ProviderInput) -> Result<Prov
         })
         .unwrap_or_else(|| {
             (
-                id.clone(),
+                requested_id.clone(),
+                requested_id.clone(),
                 "apikey".into(),
                 input.name.clone(),
                 serde_json::json!({}),
             )
         });
     data["providerSpecificData"]["baseUrl"] = serde_json::json!(input.base_url);
+    data["providerSpecificData"]["apiFormat"] = serde_json::json!(input.api_format);
     if !input.api_key.is_empty() {
         data["apiKey"] = serde_json::json!(input.api_key);
     }
     data["providerSpecificData"]["enabledModels"] = serde_json::json!(input.models);
     sqlx::query("INSERT INTO providerConnections(id,provider,authType,name,isActive,data,createdAt,updatedAt) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET isActive=excluded.isActive,data=excluded.data,updatedAt=excluded.updatedAt")
         .bind(&id).bind(&provider).bind(&auth_type).bind(&name).bind(if input.enabled {1_i64} else {0_i64}).bind(data.to_string()).bind(&now).bind(&now).execute(db).await?;
-    get_provider(db, &id).await?.ok_or(sqlx::Error::RowNotFound)
+    get_provider(db, &provider)
+        .await?
+        .ok_or(sqlx::Error::RowNotFound)
 }
 
 fn chrono_stub_now() -> String {
@@ -281,7 +280,8 @@ fn chrono_stub_now() -> String {
 }
 
 pub async fn delete_provider(db: &SqlitePool, id: &str) -> Result<bool, sqlx::Error> {
-    let result = sqlx::query("DELETE FROM providerConnections WHERE id=?")
+    let result = sqlx::query("DELETE FROM providerConnections WHERE id=? OR provider=?")
+        .bind(id)
         .bind(id)
         .execute(db)
         .await?;

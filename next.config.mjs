@@ -8,6 +8,7 @@ const tracingRoot = process.env.NEXT_TRACING_ROOT_MODE === "workspace"
   ? join(projectRoot, "..")
   : projectRoot;
 const proxyClientMaxBodySize = process.env.NINEROUTER_PROXY_CLIENT_MAX_BODY_SIZE || "128mb";
+const routeInferenceThroughRust = process.env.NINEROUTER_RUST_ENABLED === "true";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -61,7 +62,17 @@ const nextConfig = {
     return config;
   },
   async rewrites() {
+    const rustRoutes = routeInferenceThroughRust ? [
+      { source: "/v1/:path*", destination: "/api/rust/v1/:path*" },
+      { source: "/v1", destination: "/api/rust/v1" },
+      { source: "/api/v1/:path*", destination: "/api/rust/v1/:path*" },
+      { source: "/api/v1", destination: "/api/rust/v1" },
+      { source: "/codex/:path*", destination: "/api/rust/v1/responses" },
+      { source: "/responses", destination: "/api/rust/v1/responses" },
+      { source: "/systemone", destination: "/api/rust/v1/systemone" },
+    ] : [];
     return [
+      ...rustRoutes,
       {
         source: "/v1/v1/:path*",
         destination: "/api/v1/:path*"
