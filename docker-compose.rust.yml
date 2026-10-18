@@ -1,0 +1,19 @@
+services:
+  9router-rust:
+    build:
+      context: ./rust
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-20127}:20127"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 20127
+      DATA_DIR: /data
+      NINEROUTER_API_KEY: ${NINEROUTER_API_KEY:-}
+      RUST_LOG: ${RUST_LOG:-info}
+    volumes:
+      - 9router-rust-data:/data
+    restart: unless-stopped
+
+volumes:
+  9router-rust-data:

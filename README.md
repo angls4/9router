@@ -1564,3 +1564,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 <div align="center">
   <sub>Built with ❤️ for developers who code 24/7</sub>
 </div>
+
+## Rust gateway
+
+A standalone Rust implementation of the 9Router gateway and local management page is available in [`rust/`](rust/README.md). It includes OpenAI-compatible streaming, native Anthropic forwarding, SQLite provider configuration, fallback combos, request history, and no Headroom feature. The existing Next.js application remains available; provider-specific OAuth, refresh, and cross-format translation have not yet been ported to Rust.

@@ -101,3 +101,5 @@ graphify-out/*
 .start-dev.ps1
 start-dev-silent.cjs
 debug.log
+
+/rust/target/
