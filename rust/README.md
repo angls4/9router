@@ -6,14 +6,17 @@ The Rust service currently includes:
 
 - OpenAI-compatible `/v1` proxying with unbuffered SSE streaming
 - Native Anthropic request forwarding (`/v1/messages`)
+- Basic non-streaming OpenAI Chat Completions ↔ Anthropic Messages conversion
 - Provider and model configuration in SQLite
-- Dashboard APIs for provider connections/nodes, settings, API keys, combos, model aliases/custom/disabled models, pricing overrides, and request logs
+- Dashboard APIs for provider connections/nodes, settings, API keys, combos, model aliases/custom/disabled models, pricing overrides, proxy-pool CRUD, translator diagnostics, media voice catalogs, and usage analytics
+- OAuth and imported access-token accounts in priority-ordered routing, with `x-connection-id` account pinning
+- Usage summary/chart/detail endpoints backed by the shared `usageHistory` and `requestDetails` tables; Rust gateway requests append basic usage rows
 - Ordered fallback combos with retries on network errors, HTTP 408, 409, 429, and 5xx
 - Optional gateway bearer-key authentication
 - Recent request log and a browser UI at `/`
 - JSON and multipart request forwarding, including model rewriting
 
-The existing Node/Next.js app remains the frontend and shares its existing `DATA_DIR/db/data.sqlite` database with Rust. The Rust build routes the supported dashboard data APIs through Rust, while auth, OAuth flows, provider-node administration, usage analytics, CLI integrations, media services, and other specialized APIs remain in Node for now. Headroom controls are hidden in the Rust frontend build and its settings are omitted from Rust responses. OpenAI-style clients currently need OpenAI-compatible upstreams; Anthropic clients use the native Messages API. Cross-protocol translation and OAuth refresh/account selection are not yet implemented in Rust. Credentials are stored in the shared SQLite database, so protect its data directory.
+The existing Node/Next.js app remains the frontend and shares its existing `DATA_DIR/db/data.sqlite` database with Rust. The Rust build routes the supported dashboard data APIs through Rust. Headroom controls are hidden in the Rust frontend build and its settings are omitted from Rust responses. OAuth routing uses stored credentials, but provider-specific token refresh, OAuth login/import flows, CLI filesystem adapters, MCP child-process bridges, tunnel lifecycle management, proxy-provider deployment, translator streaming/send/log APIs, media voice catalogs outside Deepgram/ElevenLabs/Inworld/MiniMax, and provider quota/reset APIs still run in Node. The current cross-protocol converter handles basic non-streaming chat/messages text and tool calls; streaming conversion, image/audio blocks, and provider-specific protocol variants are not complete. Rust's usage rows currently record request counts and latency, not upstream token usage or cost. Credentials are stored in the shared SQLite database, so protect its data directory.
 
 ## Run locally
 
@@ -25,7 +28,7 @@ cargo run --release --manifest-path rust/Cargo.toml
 
 Or use `./start-rust.sh`. The service binds to `127.0.0.1:20127`. The first build downloads Rust dependencies. Set these environment variables as needed:
 
-To keep Node as the dashboard frontend and route supported APIs and inference requests through its streaming proxy to Rust, build with `npm run build:rust-frontend`, then run `./start-full.sh`. The build routes `/v1`, `/api/v1`, `/responses`, `/codex`, `/systemone`, and the documented dashboard data APIs through Rust. `start-full.sh` starts Node on port 20127 and Rust on port 20128. Set `NINEROUTER_RUST_URL` if Rust listens elsewhere. Specialized integrations still use Node.
+To keep Node as the dashboard frontend and route supported APIs and inference requests through its streaming proxy to Rust, build with `npm run build:rust-frontend`, then run `./start-full.sh`. The build routes `/v1`, `/api/v1`, `/responses`, `/codex`, `/systemone`, supported usage APIs, proxy-pool CRUD, selected translator diagnostics, and supported media voice catalogs through Rust. `start-full.sh` starts Node on port 20127 and Rust on port 20128. Set `NINEROUTER_RUST_URL` if Rust listens elsewhere. Specialized integrations still use Node.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
@@ -60,7 +63,7 @@ curl http://127.0.0.1:20127/v1/chat/completions \
 
 If `NINEROUTER_API_KEY` is set, use that same value in the client Authorization header and the page's gateway-key field. Set it for management requests too.
 
-Choose `"apiFormat":"anthropic"` for an Anthropic upstream. The gateway sets `x-api-key` and a default `anthropic-version` header. Use the client's native `/v1/messages` endpoint and payload; no format translation is performed.
+Choose `"apiFormat":"anthropic"` for an Anthropic upstream. The gateway sets `x-api-key` and a default `anthropic-version` header. Native `/v1/messages` requests are forwarded; basic non-streaming OpenAI chat requests are converted to Messages and back. Use native protocol requests for streaming and media content.
 
 ## Fallback combos
 

@@ -79,6 +79,21 @@ const nextConfig = {
       { source: "/api/provider-nodes/:id", destination: "/api/rust/api/provider-nodes/:id" },
       { source: "/api/usage/logs", destination: "/api/rust/api/usage/logs" },
       { source: "/api/usage/request-logs", destination: "/api/rust/api/usage/request-logs" },
+      ...["history", "stats", "chart", "providers", "request-details", "stream"].map((path) => ({
+        source: `/api/usage/${path}`,
+        destination: `/api/rust/api/usage/${path}`,
+      })),
+      { source: "/api/proxy-pools", destination: "/api/rust/api/proxy-pools" },
+      { source: "/api/proxy-pools/:id/test", destination: "/api/rust/api/proxy-pools/:id/test" },
+      { source: "/api/proxy-pools/:id", destination: "/api/rust/api/proxy-pools/:id" },
+      ...["load", "save", "translate"].map((path) => ({
+        source: `/api/translator/${path}`,
+        destination: `/api/rust/api/translator/${path}`,
+      })),
+      ...["deepgram", "elevenlabs", "inworld", "minimax"].map((provider) => ({
+        source: `/api/media-providers/tts/${provider}/voices`,
+        destination: `/api/rust/api/media-providers/tts/${provider}/voices`,
+      })),
       ...["combos", "keys", "models", "models/alias", "models/custom", "models/disabled", "settings", "pricing"].map((path) => ({
         source: `/api/${path}`,
         destination: `/api/rust/api/${path}`,

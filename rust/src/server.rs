@@ -6,10 +6,14 @@ use axum::{
     extract::{DefaultBodyLimit, OriginalUri, Path, State},
     http::{HeaderMap, HeaderValue, Method, StatusCode, header},
     middleware::{self, Next},
-    response::{Html, IntoResponse, Response},
+    response::{
+        Html, IntoResponse, Response,
+        sse::{Event, KeepAlive, Sse},
+    },
     routing::{any, get},
 };
 use bytes::Bytes;
+use chrono::Timelike;
 use futures_util::StreamExt;
 use hmac::Mac;
 use serde_json::{Value, json};
@@ -101,6 +105,39 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/api/usage/logs", get(api_usage_logs))
         .route("/api/usage/request-logs", get(api_usage_logs))
+        .route("/api/usage/history", get(api_usage_stats))
+        .route("/api/usage/stats", get(api_usage_stats))
+        .route("/api/usage/chart", get(api_usage_chart))
+        .route("/api/usage/providers", get(api_usage_providers))
+        .route("/api/usage/request-details", get(api_usage_details))
+        .route("/api/usage/stream", get(api_usage_stream))
+        .route(
+            "/api/proxy-pools",
+            get(api_list_proxy_pools).post(api_create_proxy_pool),
+        )
+        .route(
+            "/api/proxy-pools/{id}",
+            get(api_get_proxy_pool)
+                .put(api_update_proxy_pool)
+                .delete(api_delete_proxy_pool),
+        )
+        .route(
+            "/api/proxy-pools/{id}/test",
+            axum::routing::post(api_test_proxy_pool),
+        )
+        .route("/api/translator/load", get(api_translator_load))
+        .route(
+            "/api/translator/save",
+            axum::routing::post(api_translator_save),
+        )
+        .route(
+            "/api/translator/translate",
+            axum::routing::post(api_translator_translate),
+        )
+        .route(
+            "/api/media-providers/tts/{provider}/voices",
+            get(api_media_tts_voices),
+        )
         .route(
             "/admin/providers/{id}",
             axum::routing::delete(remove_provider),
@@ -768,6 +805,1015 @@ async fn api_usage_logs(State(s): State<AppState>) -> Result<Json<Value>, ApiErr
         })
         .collect::<Vec<_>>();
     Ok(Json(json!(logs)))
+}
+
+async fn api_usage_stats(
+    State(s): State<AppState>,
+    OriginalUri(uri): OriginalUri,
+) -> Result<Json<Value>, ApiError> {
+    use sqlx::Row;
+    let period = uri
+        .query()
+        .and_then(|q| query_value(q, "period"))
+        .unwrap_or("7d");
+    if !["today", "24h", "7d", "30d", "60d", "all"].contains(&period) {
+        return Err(ApiError::bad_request("Invalid period"));
+    }
+    let rows = if period == "all" {
+        sqlx::query("SELECT timestamp,provider,model,connectionId,apiKey,endpoint,promptTokens,completionTokens,cost,status,tokens FROM usageHistory ORDER BY id DESC")
+            .fetch_all(&s.db).await?
+    } else {
+        let now = chrono::Utc::now();
+        let since = match period {
+            "today" => now.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc(),
+            "24h" => now - chrono::Duration::hours(24),
+            "30d" => now - chrono::Duration::days(30),
+            "60d" => now - chrono::Duration::days(60),
+            _ => now - chrono::Duration::days(7),
+        };
+        sqlx::query("SELECT timestamp,provider,model,connectionId,apiKey,endpoint,promptTokens,completionTokens,cost,status,tokens FROM usageHistory WHERE timestamp >= ? ORDER BY id DESC")
+            .bind(since.to_rfc3339()).fetch_all(&s.db).await?
+    };
+    let mut total_requests = 0_i64;
+    let (mut prompt, mut completion, mut cached, mut cost) = (0_i64, 0_i64, 0_i64, 0_f64);
+    let mut by_provider = serde_json::Map::new();
+    let mut by_model = serde_json::Map::new();
+    let mut by_account = serde_json::Map::new();
+    let mut by_endpoint = serde_json::Map::new();
+    let mut by_api_key = serde_json::Map::new();
+    let mut recent = Vec::new();
+    for row in rows.iter().rev() {
+        let p: i64 = row.try_get("promptTokens").unwrap_or(0);
+        let c: i64 = row.try_get("completionTokens").unwrap_or(0);
+        let co: f64 = row.try_get("cost").unwrap_or(0.0);
+        let tokens: Value = row
+            .try_get::<Option<String>, _>("tokens")
+            .unwrap_or_default()
+            .and_then(|v| serde_json::from_str(&v).ok())
+            .unwrap_or_else(|| json!({}));
+        let p = tokens
+            .get("prompt_tokens")
+            .or_else(|| tokens.get("input_tokens"))
+            .and_then(Value::as_i64)
+            .unwrap_or(p);
+        let c = tokens
+            .get("completion_tokens")
+            .or_else(|| tokens.get("output_tokens"))
+            .and_then(Value::as_i64)
+            .unwrap_or(c);
+        let ca = tokens
+            .get("cached_tokens")
+            .or_else(|| tokens.get("cache_read_input_tokens"))
+            .and_then(Value::as_i64)
+            .unwrap_or(0);
+        let provider: String = row
+            .try_get::<Option<String>, _>("provider")
+            .unwrap_or_default()
+            .unwrap_or_default();
+        let model: String = row
+            .try_get::<Option<String>, _>("model")
+            .unwrap_or_default()
+            .unwrap_or_default();
+        let account: String = row
+            .try_get::<Option<String>, _>("connectionId")
+            .unwrap_or_default()
+            .unwrap_or_default();
+        let endpoint: String = row
+            .try_get::<Option<String>, _>("endpoint")
+            .unwrap_or_default()
+            .unwrap_or_else(|| "Unknown".into());
+        let api_key: String = row
+            .try_get::<Option<String>, _>("apiKey")
+            .unwrap_or_default()
+            .unwrap_or_else(|| "local-no-key".into());
+        let timestamp: String = row.try_get("timestamp").unwrap_or_default();
+        let status: String = row
+            .try_get::<Option<String>, _>("status")
+            .unwrap_or_default()
+            .unwrap_or_else(|| "ok".into());
+        total_requests += 1;
+        prompt += p;
+        completion += c;
+        cached += ca;
+        cost += co;
+        update_usage_counter(&mut by_provider, &provider, p, c, ca, co, None);
+        update_usage_counter(
+            &mut by_model,
+            &format!("{model} ({provider})"),
+            p,
+            c,
+            ca,
+            co,
+            Some(json!({"rawModel":model,"provider":provider,"lastUsed":timestamp})),
+        );
+        if !account.is_empty() {
+            update_usage_counter(
+                &mut by_account,
+                &format!("{model} ({provider} - {account})"),
+                p,
+                c,
+                ca,
+                co,
+                Some(
+                    json!({"rawModel":model,"provider":provider,"connectionId":account,"accountName":account,"lastUsed":timestamp}),
+                ),
+            );
+        }
+        update_usage_counter(
+            &mut by_endpoint,
+            &format!("{endpoint}|{model}|{provider}"),
+            p,
+            c,
+            ca,
+            co,
+            Some(
+                json!({"endpoint":endpoint,"rawModel":model,"provider":provider,"lastUsed":timestamp}),
+            ),
+        );
+        update_usage_counter(
+            &mut by_api_key,
+            &format!("{api_key}|{model}|{provider}"),
+            p,
+            c,
+            ca,
+            co,
+            Some(
+                json!({"rawModel":model,"provider":provider,"apiKeyMasked":mask_usage_key(&api_key),"keyName":if api_key=="local-no-key" {"Local (No API Key)"} else {"API Key"},"lastUsed":timestamp}),
+            ),
+        );
+        if recent.len() < 20 && (p != 0 || c != 0) {
+            recent.push(json!({"timestamp":timestamp,"model":model,"provider":provider,"promptTokens":p,"completionTokens":c,"cachedTokens":ca,"status":status}));
+        }
+    }
+    Ok(Json(
+        json!({"totalRequests":total_requests,"totalPromptTokens":prompt,"totalCompletionTokens":completion,"totalCachedTokens":cached,"totalCost":cost,"byProvider":by_provider,"byModel":by_model,"byAccount":by_account,"byApiKey":by_api_key,"byEndpoint":by_endpoint,"last10Minutes":[],"pending":{"byModel":{},"byAccount":{}},"activeRequests":[],"recentRequests":recent,"errorProvider":""}),
+    ))
+}
+
+fn update_usage_counter(
+    map: &mut serde_json::Map<String, Value>,
+    key: &str,
+    prompt: i64,
+    completion: i64,
+    cached: i64,
+    cost: f64,
+    meta: Option<Value>,
+) {
+    let entry = map.entry(key.to_string()).or_insert_with(
+        || json!({"requests":0,"promptTokens":0,"completionTokens":0,"cachedTokens":0,"cost":0.0}),
+    );
+    entry["requests"] = json!(entry["requests"].as_i64().unwrap_or(0) + 1);
+    entry["promptTokens"] = json!(entry["promptTokens"].as_i64().unwrap_or(0) + prompt);
+    entry["completionTokens"] = json!(entry["completionTokens"].as_i64().unwrap_or(0) + completion);
+    entry["cachedTokens"] = json!(entry["cachedTokens"].as_i64().unwrap_or(0) + cached);
+    entry["cost"] = json!(entry["cost"].as_f64().unwrap_or(0.0) + cost);
+    if let Some(meta) = meta {
+        if let (Some(dst), Some(src)) = (entry.as_object_mut(), meta.as_object()) {
+            for (k, v) in src {
+                dst.insert(k.clone(), v.clone());
+            }
+        }
+    }
+}
+
+fn mask_usage_key(key: &str) -> Value {
+    if key == "local-no-key" {
+        return Value::Null;
+    }
+    let masked = if key.len() <= 12 {
+        format!("{}***", key.chars().next().unwrap_or('*'))
+    } else {
+        format!("{}***{}", &key[..8], &key[key.len() - 4..])
+    };
+    json!(masked)
+}
+
+async fn api_usage_providers(State(s): State<AppState>) -> Result<Json<Value>, ApiError> {
+    let rows: Vec<String> = sqlx::query_scalar("SELECT DISTINCT provider FROM usageHistory WHERE provider IS NOT NULL AND provider != '' ORDER BY provider").fetch_all(&s.db).await?;
+    Ok(Json(
+        json!({"providers": rows.into_iter().map(|id| json!({"id":id,"name":id})).collect::<Vec<_>>()}),
+    ))
+}
+
+async fn api_usage_stream(
+    State(s): State<AppState>,
+) -> Sse<impl futures_util::Stream<Item = Result<Event, std::convert::Infallible>>> {
+    let stream = futures_util::stream::unfold(
+        (s, tokio::time::interval(std::time::Duration::from_secs(10))),
+        |(state, mut interval)| async move {
+            interval.tick().await;
+            let event = match api_usage_stats(
+                State(state.clone()),
+                OriginalUri(axum::http::Uri::from_static("/api/usage/stats?period=7d")),
+            )
+            .await
+            {
+                Ok(Json(stats)) => Event::default().data(stats.to_string()),
+                Err(_) => {
+                    Event::default().data(json!({"error":"Usage stats unavailable"}).to_string())
+                }
+            };
+            Some((Ok(event), (state, interval)))
+        },
+    );
+    Sse::new(stream).keep_alive(
+        KeepAlive::new()
+            .interval(std::time::Duration::from_secs(25))
+            .text("ping"),
+    )
+}
+
+async fn api_usage_details(
+    State(s): State<AppState>,
+    OriginalUri(uri): OriginalUri,
+) -> Result<Json<Value>, ApiError> {
+    use sqlx::Row;
+    let page = query_int(uri.query(), "page").unwrap_or(1);
+    let page_size = query_int(uri.query(), "pageSize").unwrap_or(20);
+    if page < 1 {
+        return Err(ApiError::bad_request("Page must be >= 1"));
+    }
+    if !(1..=100).contains(&page_size) {
+        return Err(ApiError::bad_request("PageSize must be between 1 and 100"));
+    }
+    let rows = sqlx::query("SELECT id,timestamp,provider,model,connectionId,status,data FROM requestDetails ORDER BY timestamp DESC LIMIT ? OFFSET ?")
+        .bind(page_size).bind((page-1)*page_size).fetch_all(&s.db).await?;
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM requestDetails")
+        .fetch_one(&s.db)
+        .await?;
+    let details: Vec<Value> = rows.into_iter().map(|r| {
+        let mut data: Value = r.try_get::<String,_>("data").ok().and_then(|v| serde_json::from_str(&v).ok()).unwrap_or_else(|| json!({}));
+        if let Some(o) = data.as_object_mut() { for key in ["request","providerRequest","providerResponse","response"] { if o.contains_key(key) { o.insert(key.into(), json!({"redacted":true})); } } }
+        json!({"id":r.try_get::<String,_>("id").unwrap_or_default(),"timestamp":r.try_get::<String,_>("timestamp").unwrap_or_default(),"provider":r.try_get::<Option<String>,_>("provider").ok().flatten(),"model":r.try_get::<Option<String>,_>("model").ok().flatten(),"connectionId":r.try_get::<Option<String>,_>("connectionId").ok().flatten(),"status":r.try_get::<Option<String>,_>("status").ok().flatten(),"details":data})
+    }).collect();
+    Ok(Json(
+        json!({"details":details,"total":total,"page":page,"pageSize":page_size,"totalPages":(total + page_size - 1)/page_size}),
+    ))
+}
+
+fn query_int(query: Option<&str>, key: &str) -> Option<i64> {
+    query?.split('&').find_map(|part| {
+        let (k, v) = part.split_once('=')?;
+        (k == key).then(|| v.parse().ok()).flatten()
+    })
+}
+
+async fn api_list_proxy_pools(
+    State(s): State<AppState>,
+    OriginalUri(uri): OriginalUri,
+) -> Result<Json<Value>, ApiError> {
+    use sqlx::Row;
+    let active_filter = uri
+        .query()
+        .and_then(|q| q.split('&').find_map(|p| p.strip_prefix("isActive=")));
+    let rows = match active_filter {
+        Some("true") => {
+            sqlx::query("SELECT * FROM proxyPools WHERE isActive=1 ORDER BY updatedAt DESC")
+                .fetch_all(&s.db)
+                .await?
+        }
+        Some("false") => {
+            sqlx::query("SELECT * FROM proxyPools WHERE isActive=0 ORDER BY updatedAt DESC")
+                .fetch_all(&s.db)
+                .await?
+        }
+        _ => {
+            sqlx::query("SELECT * FROM proxyPools ORDER BY updatedAt DESC")
+                .fetch_all(&s.db)
+                .await?
+        }
+    };
+    let include_usage = uri
+        .query()
+        .is_some_and(|q| q.split('&').any(|p| p == "includeUsage=true"));
+    let pools: Vec<Value> = rows
+        .into_iter()
+        .map(|row| {
+            let mut value: Value = row
+                .try_get::<String, _>("data")
+                .ok()
+                .and_then(|v| serde_json::from_str(&v).ok())
+                .unwrap_or_else(|| json!({}));
+            let id: String = row.try_get("id").unwrap_or_default();
+            value["id"] = json!(id);
+            value["isActive"] = json!(row.try_get::<i64, _>("isActive").unwrap_or(0) == 1);
+            value["testStatus"] = row
+                .try_get::<Option<String>, _>("testStatus")
+                .ok()
+                .flatten()
+                .map(Value::String)
+                .unwrap_or(Value::Null);
+            value["createdAt"] = json!(row.try_get::<String, _>("createdAt").unwrap_or_default());
+            value["updatedAt"] = json!(row.try_get::<String, _>("updatedAt").unwrap_or_default());
+            value
+        })
+        .collect();
+    if include_usage {
+        let connections = sqlx::query("SELECT data FROM providerConnections")
+            .fetch_all(&s.db)
+            .await?;
+        let mut counts = std::collections::HashMap::<String, i64>::new();
+        for row in connections {
+            let raw: String = row.try_get("data").unwrap_or_default();
+            let data: Value = serde_json::from_str(&raw).unwrap_or_default();
+            if let Some(id) = data["providerSpecificData"]["proxyPoolId"].as_str() {
+                *counts.entry(id.to_string()).or_default() += 1;
+            }
+        }
+        let enriched: Vec<Value> = pools
+            .into_iter()
+            .map(|mut pool| {
+                let id = pool["id"].as_str().unwrap_or_default();
+                pool["boundConnectionCount"] = json!(counts.get(id).copied().unwrap_or(0));
+                pool
+            })
+            .collect();
+        return Ok(Json(json!({"proxyPools":enriched})));
+    }
+    Ok(Json(json!({"proxyPools":pools})))
+}
+
+async fn api_create_proxy_pool(
+    State(s): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Result<(StatusCode, Json<Value>), ApiError> {
+    authorize(&s, &headers).await?;
+    let name = body["name"].as_str().unwrap_or_default().trim();
+    let proxy_url = body["proxyUrl"].as_str().unwrap_or_default().trim();
+    if name.is_empty() {
+        return Err(ApiError::bad_request("Name is required"));
+    }
+    if proxy_url.is_empty() {
+        return Err(ApiError::bad_request("Proxy URL is required"));
+    }
+    let pool = build_proxy_pool(body, None);
+    save_proxy_pool(&s.db, &pool).await?;
+    Ok((StatusCode::CREATED, Json(json!({"proxyPool":pool}))))
+}
+
+async fn api_get_proxy_pool(
+    State(s): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    let pool = read_proxy_pool(&s.db, &id)
+        .await?
+        .ok_or_else(|| ApiError::not_found("Proxy pool not found"))?;
+    Ok(Json(json!({"proxyPool":pool})))
+}
+
+async fn api_update_proxy_pool(
+    State(s): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<Value>,
+) -> Result<Json<Value>, ApiError> {
+    authorize(&s, &headers).await?;
+    let existing = read_proxy_pool(&s.db, &id)
+        .await?
+        .ok_or_else(|| ApiError::not_found("Proxy pool not found"))?;
+    let mut merged = existing;
+    if let Some(obj) = body.as_object() {
+        for (k, v) in obj {
+            if k == "name" && v.as_str().unwrap_or_default().trim().is_empty() {
+                return Err(ApiError::bad_request("Name is required"));
+            }
+            if k == "proxyUrl" && v.as_str().unwrap_or_default().trim().is_empty() {
+                return Err(ApiError::bad_request("Proxy URL is required"));
+            }
+            merged[k] = v.clone();
+        }
+    }
+    merged["updatedAt"] = json!(chrono::Utc::now().to_rfc3339());
+    save_proxy_pool(&s.db, &merged).await?;
+    Ok(Json(json!({"proxyPool":merged})))
+}
+
+async fn api_delete_proxy_pool(
+    State(s): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    authorize(&s, &headers).await?;
+    let Some(_) = read_proxy_pool(&s.db, &id).await? else {
+        return Err(ApiError::not_found("Proxy pool not found"));
+    };
+    let connections = sqlx::query("SELECT data FROM providerConnections")
+        .fetch_all(&s.db)
+        .await?;
+    let mut count = 0;
+    for row in connections {
+        let raw: String = sqlx::Row::try_get(&row, "data").unwrap_or_default();
+        let data: Value = serde_json::from_str(&raw).unwrap_or_default();
+        if data["providerSpecificData"]["proxyPoolId"].as_str() == Some(&id) {
+            count += 1;
+        }
+    }
+    if count > 0 {
+        return Err(ApiError::new(
+            StatusCode::CONFLICT,
+            format!("Proxy pool is currently in use ({count} connections)"),
+        ));
+    }
+    sqlx::query("DELETE FROM proxyPools WHERE id=?")
+        .bind(id)
+        .execute(&s.db)
+        .await?;
+    Ok(Json(json!({"success":true})))
+}
+
+async fn api_test_proxy_pool(
+    State(s): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    authorize(&s, &headers).await?;
+    let mut pool = read_proxy_pool(&s.db, &id)
+        .await?
+        .ok_or_else(|| ApiError::not_found("Proxy pool not found"))?;
+    let proxy_url = pool["proxyUrl"].as_str().unwrap_or_default();
+    let start = std::time::Instant::now();
+    let response = if matches!(
+        pool["type"].as_str().unwrap_or("http"),
+        "vercel" | "cloudflare" | "deno" | "netlify"
+    ) {
+        s.http
+            .get(proxy_url)
+            .header("x-relay-target", "https://httpbin.org")
+            .header("x-relay-path", "/get")
+            .timeout(std::time::Duration::from_secs(10))
+            .send()
+            .await
+    } else {
+        match reqwest::Client::builder()
+            .proxy(
+                reqwest::Proxy::all(proxy_url)
+                    .map_err(|e| ApiError::bad_request(format!("Invalid proxy URL: {e}")))?,
+            )
+            .timeout(std::time::Duration::from_secs(10))
+            .build()
+        {
+            Ok(client) => client.get("https://httpbin.org/get").send().await,
+            Err(e) => Err(e),
+        }
+    };
+    let elapsed = start.elapsed().as_millis() as u64;
+    let now = chrono::Utc::now().to_rfc3339();
+    let (ok, status, status_text, error) = match response {
+        Ok(r) => {
+            let status = r.status();
+            (
+                status.is_success(),
+                status.as_u16(),
+                status.canonical_reason().map(str::to_string),
+                None,
+            )
+        }
+        Err(e) => (false, 500, None, Some(e.to_string())),
+    };
+    pool["testStatus"] = json!(if ok { "active" } else { "error" });
+    pool["lastTestedAt"] = json!(now);
+    pool["lastError"] = if ok {
+        Value::Null
+    } else {
+        json!(
+            error
+                .clone()
+                .unwrap_or_else(|| format!("Proxy test failed with status {status}"))
+        )
+    };
+    pool["isActive"] = json!(ok);
+    pool["updatedAt"] = json!(now);
+    save_proxy_pool(&s.db, &pool).await?;
+    Ok(Json(
+        json!({"ok":ok,"status":status,"statusText":status_text,"error":error,"elapsedMs":elapsed,"testedAt":now}),
+    ))
+}
+
+fn build_proxy_pool(body: Value, id: Option<String>) -> Value {
+    let now = chrono::Utc::now().to_rfc3339();
+    json!({"id":id.unwrap_or_else(||uuid::Uuid::new_v4().to_string()),"name":body["name"].as_str().unwrap_or_default().trim(),"proxyUrl":body["proxyUrl"].as_str().unwrap_or_default().trim(),"noProxy":body["noProxy"].as_str().unwrap_or_default(),"type":if ["http","vercel","cloudflare","deno","netlify"].contains(&body["type"].as_str().unwrap_or("")){body["type"].clone()}else{json!("http")},"isActive":body.get("isActive").and_then(Value::as_bool).unwrap_or(true),"strictProxy":body["strictProxy"]==true,"testStatus":"unknown","lastTestedAt":null,"lastError":null,"createdAt":now,"updatedAt":now})
+}
+
+async fn read_proxy_pool(db: &SqlitePool, id: &str) -> Result<Option<Value>, ApiError> {
+    use sqlx::Row;
+    let row = sqlx::query("SELECT * FROM proxyPools WHERE id=?")
+        .bind(id)
+        .fetch_optional(db)
+        .await?;
+    Ok(row.map(|r| {
+        let mut v: Value = r
+            .try_get::<String, _>("data")
+            .ok()
+            .and_then(|x| serde_json::from_str(&x).ok())
+            .unwrap_or_else(|| json!({}));
+        v["id"] = json!(r.try_get::<String, _>("id").unwrap_or_default());
+        v["isActive"] = json!(r.try_get::<i64, _>("isActive").unwrap_or(0) == 1);
+        v["testStatus"] = r
+            .try_get::<Option<String>, _>("testStatus")
+            .ok()
+            .flatten()
+            .map(Value::String)
+            .unwrap_or(Value::Null);
+        v["createdAt"] = json!(r.try_get::<String, _>("createdAt").unwrap_or_default());
+        v["updatedAt"] = json!(r.try_get::<String, _>("updatedAt").unwrap_or_default());
+        v
+    }))
+}
+
+async fn save_proxy_pool(db: &SqlitePool, pool: &Value) -> Result<(), ApiError> {
+    let id = pool["id"].as_str().unwrap_or_default();
+    let active = pool["isActive"].as_bool().unwrap_or(true);
+    let status = pool["testStatus"].as_str();
+    let created = pool["createdAt"].as_str().unwrap_or_default();
+    let updated = pool["updatedAt"].as_str().unwrap_or_default();
+    let mut data = pool.clone();
+    if let Some(obj) = data.as_object_mut() {
+        for k in ["id", "isActive", "testStatus", "createdAt", "updatedAt"] {
+            obj.remove(k);
+        }
+    }
+    sqlx::query("INSERT INTO proxyPools(id,isActive,testStatus,data,createdAt,updatedAt) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET isActive=excluded.isActive,testStatus=excluded.testStatus,data=excluded.data,updatedAt=excluded.updatedAt").bind(id).bind(if active{1}else{0}).bind(status).bind(data.to_string()).bind(created).bind(updated).execute(db).await?;
+    Ok(())
+}
+
+fn translator_file(name: &str) -> bool {
+    [
+        "1_req_client.json",
+        "2_req_source.json",
+        "3_req_openai.json",
+        "4_req_target.json",
+        "5_res_provider.txt",
+        "6_res_openai.txt",
+        "7_res_client.txt",
+        "7_res_client.json",
+    ]
+    .contains(&name)
+}
+
+async fn api_translator_load(
+    State(_s): State<AppState>,
+    OriginalUri(uri): OriginalUri,
+) -> Result<Json<Value>, ApiError> {
+    let file = uri
+        .query()
+        .and_then(|q| q.split('&').find_map(|p| p.strip_prefix("file=")))
+        .unwrap_or("");
+    if !translator_file(file) {
+        return Err(ApiError::bad_request("Invalid file name"));
+    }
+    let path = std::env::current_dir()
+        .map_err(|e| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .join("logs")
+        .join("translator")
+        .join(file);
+    let content = tokio::fs::read_to_string(path).await.map_err(|e| {
+        if e.kind() == std::io::ErrorKind::NotFound {
+            ApiError::not_found("File not found")
+        } else {
+            ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        }
+    })?;
+    Ok(Json(json!({"success":true,"content":content})))
+}
+
+async fn api_translator_save(
+    State(_s): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Result<Json<Value>, ApiError> {
+    authorize_dashboard_header(&headers)?;
+    let file = body["file"].as_str().unwrap_or("");
+    let content = body["content"]
+        .as_str()
+        .ok_or_else(|| ApiError::bad_request("File and content required"))?;
+    if !translator_file(file) {
+        return Err(ApiError::bad_request("Invalid file name"));
+    }
+    let dir = std::env::current_dir()
+        .map_err(|e| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .join("logs")
+        .join("translator");
+    tokio::fs::create_dir_all(&dir)
+        .await
+        .map_err(|e| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    tokio::fs::write(dir.join(file), content)
+        .await
+        .map_err(|e| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json!({"success":true})))
+}
+
+fn authorize_dashboard_header(headers: &HeaderMap) -> Result<(), ApiError> {
+    if let Ok(Some(expected)) = std::env::var("NINEROUTER_API_KEY").map(Some) {
+        let provided = headers
+            .get(header::AUTHORIZATION)
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.strip_prefix("Bearer "))
+            .or_else(|| headers.get("x-api-key").and_then(|v| v.to_str().ok()));
+        if provided != Some(expected.as_str()) {
+            return Err(ApiError::unauthorized("Missing or invalid API key"));
+        }
+    }
+    Ok(())
+}
+
+async fn api_translator_translate(
+    State(s): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Result<Json<Value>, ApiError> {
+    authorize(&s, &headers).await?;
+    let step = body["step"]
+        .as_i64()
+        .ok_or_else(|| ApiError::bad_request("Step and body required"))?;
+    let input = body.get("body").cloned().unwrap_or(Value::Null);
+    if input.is_null() {
+        return Err(ApiError::bad_request("Step and body required"));
+    }
+    let client_body = input.get("body").cloned().unwrap_or_else(|| input.clone());
+    if step == 1 {
+        let requested = client_body["model"].as_str().unwrap_or_default();
+        let target = resolve_targets(&s.db, requested)
+            .await?
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| requested.into());
+        let (provider, model) = target.split_once('/').unwrap_or(("", requested));
+        let target_format = if provider == "anthropic" || provider.starts_with("claude") {
+            "anthropic"
+        } else {
+            "openai"
+        };
+        let source =
+            if client_body.get("system").is_some() || client_body.get("max_tokens").is_some() {
+                "anthropic"
+            } else {
+                "openai"
+            };
+        return Ok(Json(
+            json!({"success":true,"result":{"provider":provider,"model":model,"sourceFormat":source,"targetFormat":target_format}}),
+        ));
+    }
+    if step == 2 {
+        let requested = client_body["model"].as_str().unwrap_or_default();
+        let target = resolve_targets(&s.db, requested)
+            .await?
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| requested.into());
+        let (provider, model) = target.split_once('/').unwrap_or(("", requested));
+        let source =
+            if client_body.get("system").is_some() || client_body.get("max_tokens").is_some() {
+                "anthropic"
+            } else {
+                "openai"
+            };
+        let openai = if source == "openai" {
+            client_body.clone()
+        } else {
+            translate_request(&client_body, "anthropic", "openai")
+        };
+        let mut result = openai.clone();
+        result["model"] = json!(model);
+        if result["stream"].is_null() {
+            result["stream"] = json!(true);
+        }
+        let _ = provider;
+        return Ok(Json(json!({"success":true,"result":{"body":result}})));
+    }
+    if step == 3 {
+        let provider = body["provider"]
+            .as_str()
+            .ok_or_else(|| ApiError::bad_request("provider and model required"))?;
+        let model = body["model"]
+            .as_str()
+            .ok_or_else(|| ApiError::bad_request("provider and model required"))?;
+        let target_format = if provider == "anthropic" || provider.starts_with("claude") {
+            "anthropic"
+        } else {
+            "openai"
+        };
+        let mut result = if target_format == "openai" {
+            client_body.clone()
+        } else {
+            translate_request(&client_body, "openai", "anthropic")
+        };
+        result["model"] = json!(model);
+        return Ok(Json(
+            json!({"success":true,"result":{"url":format!("{}/{}/{}",provider,target_format,model),"headers":{},"body":result}}),
+        ));
+    }
+    Err(ApiError::bad_request("Invalid step (1-3)"))
+}
+
+async fn api_media_tts_voices(
+    State(s): State<AppState>,
+    Path(route_provider): Path<String>,
+    OriginalUri(uri): OriginalUri,
+) -> Result<Json<Value>, ApiError> {
+    use sqlx::Row;
+    let query = uri.query().unwrap_or("");
+    let lang = query_value(query, "lang");
+    let provider =
+        if route_provider == "minimax" && query_value(query, "provider") == Some("minimax-cn") {
+            "minimax-cn"
+        } else {
+            route_provider.as_str()
+        };
+    let row=sqlx::query("SELECT data FROM providerConnections WHERE provider=? AND isActive=1 ORDER BY COALESCE(priority,999),updatedAt LIMIT 1").bind(provider).fetch_optional(&s.db).await?;
+    let Some(row) = row else {
+        return Err(ApiError::bad_request(format!(
+            "No {provider} connection found"
+        )));
+    };
+    let data: Value = serde_json::from_str(&row.try_get::<String, _>("data").unwrap_or_default())
+        .unwrap_or_default();
+    let key = data["apiKey"]
+        .as_str()
+        .or_else(|| data["accessToken"].as_str())
+        .unwrap_or_default();
+    if key.is_empty() {
+        return Err(ApiError::bad_request(format!(
+            "No {provider} connection found"
+        )));
+    }
+    let raw = match provider {
+        "deepgram" => {
+            s.http
+                .get("https://api.deepgram.com/v1/models")
+                .header(header::AUTHORIZATION, format!("Token {key}"))
+                .send()
+                .await
+        }
+        "elevenlabs" => {
+            s.http
+                .get("https://api.elevenlabs.io/v1/voices")
+                .header("xi-api-key", key)
+                .send()
+                .await
+        }
+        "inworld" => {
+            s.http
+                .get("https://api.inworld.ai/tts/v1/voices")
+                .header(header::AUTHORIZATION, format!("Basic {key}"))
+                .send()
+                .await
+        }
+        "minimax" | "minimax-cn" => {
+            s.http
+                .post(if provider == "minimax-cn" {
+                    "https://api.minimaxi.com/v1/get_voice"
+                } else {
+                    "https://api.minimax.io/v1/get_voice"
+                })
+                .bearer_auth(key)
+                .json(&json!({"voice_type":query_value(query,"voice_type").unwrap_or("all")}))
+                .send()
+                .await
+        }
+        _ => {
+            return Err(ApiError::bad_request(format!(
+                "Provider '{provider}' does not support voice listing"
+            )));
+        }
+    }
+    .map_err(|e| ApiError::upstream(e.to_string()))?;
+    if !raw.status().is_success() {
+        let status = raw.status().as_u16();
+        let text = raw.text().await.unwrap_or_default();
+        return Err(ApiError::new(
+            StatusCode::BAD_GATEWAY,
+            format!(
+                "{provider} API {status}: {}",
+                if text.is_empty() { "Failed" } else { &text }
+            ),
+        ));
+    }
+    let payload: Value = raw
+        .json()
+        .await
+        .map_err(|e| ApiError::upstream(e.to_string()))?;
+    let mut by_lang = serde_json::Map::<String, Value>::new();
+    let mut add_voice = |code: String, voice: Value| {
+        let entry = by_lang
+            .entry(code.clone())
+            .or_insert_with(|| json!({"code":code,"name":code,"voices":[]}));
+        if let Some(array) = entry["voices"].as_array_mut() {
+            let id = voice["id"].as_str();
+            if !array.iter().any(|v| v["id"].as_str() == id) {
+                array.push(voice);
+            }
+        }
+    };
+    match provider {
+        "deepgram" => {
+            for item in payload["tts"].as_array().cloned().unwrap_or_default() {
+                let id = item["canonical_name"]
+                    .as_str()
+                    .or(item["name"].as_str())
+                    .unwrap_or("voice");
+                let langs = item["languages"]
+                    .as_array()
+                    .cloned()
+                    .filter(|a| !a.is_empty())
+                    .unwrap_or_else(|| vec![json!(id.split('-').next_back().unwrap_or("en"))]);
+                for l in langs {
+                    let code = l.as_str().unwrap_or("en").to_string();
+                    add_voice(
+                        code.clone(),
+                        json!({"id":id,"name":item["name"].as_str().unwrap_or(id),"gender":"","lang":code}),
+                    );
+                }
+            }
+        }
+        "inworld" => {
+            for item in payload["voices"].as_array().cloned().unwrap_or_default() {
+                let id = item["voiceId"].as_str().unwrap_or("voice");
+                let langs = item["languages"]
+                    .as_array()
+                    .cloned()
+                    .filter(|a| !a.is_empty())
+                    .unwrap_or_else(|| vec![json!("en")]);
+                for l in langs {
+                    let code = l.as_str().unwrap_or("en").to_string();
+                    add_voice(
+                        code.clone(),
+                        json!({"id":id,"name":item["displayName"].as_str().unwrap_or(id),"gender":item["gender"].as_str().unwrap_or(""),"lang":code}),
+                    );
+                }
+            }
+        }
+        "elevenlabs" => {
+            for item in payload["voices"].as_array().cloned().unwrap_or_default() {
+                let code = item["labels"]["language"]
+                    .as_str()
+                    .unwrap_or("en")
+                    .to_string();
+                let voice = json!({"id":item["voice_id"],"name":item["name"],"gender":item["labels"]["gender"].as_str().unwrap_or(""),"lang":code,"free_users_allowed":item["category"]=="premade"||item["is_owner"]==true});
+                add_voice(code, voice);
+                for verified in item["verified_languages"]
+                    .as_array()
+                    .cloned()
+                    .unwrap_or_default()
+                {
+                    if let Some(code) = verified["language"].as_str() {
+                        add_voice(
+                            code.into(),
+                            json!({"id":item["voice_id"],"name":item["name"],"gender":item["labels"]["gender"].as_str().unwrap_or(""),"lang":code,"free_users_allowed":item["category"]=="premade"||item["is_owner"]==true}),
+                        );
+                    }
+                }
+            }
+        }
+        "minimax" | "minimax-cn" => {
+            let base = payload
+                .get("base_resp")
+                .or(payload.get("baseResp"))
+                .cloned()
+                .unwrap_or(json!({}));
+            if base
+                .get("status_code")
+                .or(base.get("statusCode"))
+                .and_then(Value::as_i64)
+                .unwrap_or(0)
+                != 0
+            {
+                return Err(ApiError::upstream(
+                    base["status_msg"]
+                        .as_str()
+                        .unwrap_or("MiniMax voice API error"),
+                ));
+            }
+            for (group, label) in [
+                ("system_voice", "System"),
+                ("voice_cloning", "Cloned"),
+                ("voice_generation", "Generated"),
+                ("music_generation", "Music"),
+            ] {
+                for item in payload[group].as_array().cloned().unwrap_or_default() {
+                    let id = item["voice_id"]
+                        .as_str()
+                        .or(item["voiceId"].as_str())
+                        .unwrap_or("");
+                    if id.is_empty() {
+                        continue;
+                    }
+                    let code = if group == "system_voice" {
+                        id.split('_').next().unwrap_or("Custom")
+                    } else {
+                        "Custom"
+                    };
+                    add_voice(
+                        code.into(),
+                        json!({"id":id,"name":format!("{}{}",item["voice_name"].as_str().or(item["voiceName"].as_str()).unwrap_or(id),if group=="system_voice"{String::new()}else{format!(" · {label}")}),"lang":code,"category":group}),
+                    );
+                }
+            }
+        }
+        _ => {}
+    }
+    let mut languages: Vec<Value> = by_lang.values().cloned().collect();
+    languages.sort_by(|a, b| {
+        a["name"]
+            .as_str()
+            .unwrap_or("")
+            .cmp(b["name"].as_str().unwrap_or(""))
+    });
+    if let Some(lang) = lang {
+        return Ok(Json(
+            json!({"voices":by_lang.get(lang).and_then(|v|v["voices"].as_array()).cloned().unwrap_or_default()}),
+        ));
+    }
+    Ok(Json(json!({"languages":languages,"byLang":by_lang})))
+}
+
+fn query_value<'a>(query: &'a str, key: &str) -> Option<&'a str> {
+    query.split('&').find_map(|part| {
+        let (k, v) = part.split_once('=')?;
+        (k == key).then_some(v)
+    })
+}
+
+async fn api_usage_chart(
+    State(s): State<AppState>,
+    OriginalUri(uri): OriginalUri,
+) -> Result<Json<Value>, ApiError> {
+    use sqlx::Row;
+    let period = uri
+        .query()
+        .and_then(|q| q.split('&').find_map(|p| p.strip_prefix("period=")))
+        .unwrap_or("7d");
+    if !["today", "24h", "7d", "30d", "60d", "all"].contains(&period) {
+        return Err(ApiError::bad_request("Invalid period"));
+    }
+    if period == "all" {
+        let daily = sqlx::query("SELECT dateKey,data FROM usageDaily ORDER BY dateKey")
+            .fetch_all(&s.db)
+            .await?;
+        if !daily.is_empty() {
+            let points = daily
+                .into_iter()
+                .map(|row| {
+                    let date: String = row.try_get("dateKey").unwrap_or_default();
+                    let day: Value = row
+                        .try_get::<String, _>("data")
+                        .ok()
+                        .and_then(|v| serde_json::from_str(&v).ok())
+                        .unwrap_or_else(|| json!({}));
+                    let label = chrono::NaiveDate::parse_from_str(&date, "%Y-%m-%d")
+                        .map(|d| d.format("%b %-d").to_string())
+                        .unwrap_or(date);
+                    json!({"label":label,"tokens":day["promptTokens"].as_i64().unwrap_or(0)+day["completionTokens"].as_i64().unwrap_or(0),"cost":day["cost"].as_f64().unwrap_or(0.0),"requests":day["requests"].as_i64().unwrap_or(0)})
+                })
+                .collect::<Vec<_>>();
+            return Ok(Json(Value::Array(points)));
+        }
+    }
+    let now = chrono::Utc::now();
+    let hourly = period == "today" || period == "24h";
+    let count = if hourly {
+        24
+    } else if period == "30d" {
+        30
+    } else if period == "60d" {
+        60
+    } else {
+        7
+    };
+    let start = if period == "today" {
+        now.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc()
+    } else if hourly {
+        now - chrono::Duration::hours(24)
+    } else {
+        now - chrono::Duration::days(count)
+    };
+    let rows=sqlx::query("SELECT timestamp,promptTokens,completionTokens,cost FROM usageHistory WHERE timestamp >= ? ORDER BY timestamp") .bind(start.to_rfc3339()).fetch_all(&s.db).await?;
+    let mut buckets: Vec<Value>=(0..count).map(|i| json!({"label":if hourly { format!("{:02}:00",(start + chrono::Duration::hours(i)).hour()) } else { (start + chrono::Duration::days(i)).format("%b %-d").to_string() },"tokens":0,"cost":0.0,"requests":0})).collect();
+    for r in rows {
+        let ts: String = r.try_get("timestamp").unwrap_or_default();
+        let Ok(t) = chrono::DateTime::parse_from_rfc3339(&ts) else {
+            continue;
+        };
+        let delta = t.with_timezone(&chrono::Utc) - start;
+        let idx = if hourly {
+            delta.num_hours()
+        } else {
+            delta.num_days()
+        };
+        if idx < 0 || idx >= count {
+            continue;
+        }
+        let b = &mut buckets[idx as usize];
+        b["tokens"] = json!(
+            b["tokens"].as_i64().unwrap_or(0)
+                + r.try_get::<i64, _>("promptTokens").unwrap_or(0)
+                + r.try_get::<i64, _>("completionTokens").unwrap_or(0)
+        );
+        b["cost"] =
+            json!(b["cost"].as_f64().unwrap_or(0.0) + r.try_get::<f64, _>("cost").unwrap_or(0.0));
+        b["requests"] = json!(b["requests"].as_i64().unwrap_or(0) + 1);
+    }
+    Ok(Json(Value::Array(buckets)))
 }
 
 async fn api_get_pricing(State(s): State<AppState>) -> Result<Json<Value>, ApiError> {
@@ -1594,8 +2640,16 @@ async fn proxy(
     }
 
     let started = Instant::now();
+    let request_format = if path.starts_with("messages") {
+        "anthropic"
+    } else {
+        "openai"
+    };
     let mut candidates = Vec::new();
-    let providers = store::list_providers(&state.db).await?;
+    // Route across every active account in priority order. The same provider
+    // may have several OAuth/API-key accounts; each is attempted separately.
+    let providers = store::list_routing_accounts(&state.db).await?;
+    let pinned_account = headers.get("x-connection-id").and_then(|v| v.to_str().ok());
     for target in &targets {
         let (provider_id, model) = target
             .split_once('/')
@@ -1603,6 +2657,9 @@ async fn proxy(
         for provider in providers
             .iter()
             .filter(|provider| provider.id == provider_id)
+            .filter(|provider| {
+                pinned_account.is_none_or(|id| provider.connection_id.as_deref() == Some(id))
+            })
         {
             let available = store::models(provider);
             if !available.is_empty() && !available.iter().any(|item| item == model) {
@@ -1617,10 +2674,26 @@ async fn proxy(
         if let Some(obj) = outbound.as_object_mut() {
             obj.insert("model".into(), Value::String(model.to_string()));
         }
+        let translating = (request_format == "anthropic") != (provider.api_format == "anthropic")
+            && (path == "messages" || path == "chat/completions");
+        if translating && outbound["stream"] == true {
+            return Err(ApiError::bad_request(
+                "Cross-protocol streaming conversion is not supported; set stream to false",
+            ));
+        }
+        let mut upstream_path = path.trim_start_matches('/').to_string();
+        if translating {
+            outbound = translate_request(&outbound, request_format, &provider.api_format);
+            upstream_path = if request_format == "anthropic" {
+                "chat/completions".into()
+            } else {
+                "messages".into()
+            };
+        }
         let upstream_path = format!(
             "{}/{}",
             provider.api_path_prefix.trim_matches('/'),
-            path.trim_start_matches('/')
+            upstream_path
         );
         let upstream_url = endpoint_url(&provider.base_url, &upstream_path, uri.query())?;
         let mut outbound_body = body.to_vec();
@@ -1654,6 +2727,25 @@ async fn proxy(
                     started.elapsed().as_millis(),
                 )
                 .await;
+                if translating && status < 400 {
+                    let response_status = upstream.status();
+                    let response_headers = upstream.headers().clone();
+                    let response_bytes = upstream
+                        .bytes()
+                        .await
+                        .map_err(|e| ApiError::upstream(e.to_string()))?;
+                    let translated = translate_response(
+                        &response_bytes,
+                        request_format,
+                        &provider.api_format,
+                        &requested_model,
+                    );
+                    return Ok(translated_response(
+                        response_status.as_u16(),
+                        &response_headers,
+                        translated,
+                    ));
+                }
                 return Ok(upstream_response(upstream));
             }
             Err(error) => {
@@ -1690,6 +2782,207 @@ async fn proxy_root(
         body,
     )
     .await
+}
+
+fn translate_request(input: &Value, from: &str, to: &str) -> Value {
+    let Some(messages) = input.get("messages").and_then(Value::as_array) else {
+        return input.clone();
+    };
+    if from == "openai" && to == "anthropic" {
+        let mut system = Vec::new();
+        let mut output = Vec::new();
+        for message in messages {
+            let role = message
+                .get("role")
+                .and_then(Value::as_str)
+                .unwrap_or("user");
+            if role == "system" || role == "developer" {
+                if let Some(text) = message.get("content").and_then(Value::as_str) {
+                    system.push(text.to_string());
+                }
+                continue;
+            }
+            let mut item = json!({"role": if role == "assistant" { "assistant" } else { "user" }, "content": message.get("content").cloned().unwrap_or(Value::String(String::new()))});
+            if let Some(calls) = message.get("tool_calls").and_then(Value::as_array) {
+                let blocks: Vec<Value> = calls.iter().map(|call| {
+                    let function = &call["function"];
+                    let input = function.get("arguments").and_then(Value::as_str).and_then(|s| serde_json::from_str(s).ok()).unwrap_or_else(|| json!({}));
+                    json!({"type":"tool_use","id":call.get("id").cloned().unwrap_or(Value::Null),"name":function.get("name").cloned().unwrap_or(Value::Null),"input":input})
+                }).collect();
+                let mut content = item["content"].as_array().cloned().unwrap_or_else(|| {
+                    item["content"]
+                        .as_str()
+                        .map(|s| vec![json!({"type":"text","text":s})])
+                        .unwrap_or_default()
+                });
+                content.extend(blocks);
+                item["content"] = Value::Array(content);
+            }
+            output.push(item);
+        }
+        let mut result = json!({"model":input.get("model"),"messages":output,"max_tokens":input.get("max_tokens").or_else(|| input.get("max_completion_tokens")).cloned().unwrap_or(json!(4096))});
+        if !system.is_empty() {
+            result["system"] = json!(system.join("\n\n"));
+        }
+        for key in ["temperature", "top_p", "stop"] {
+            if let Some(value) = input.get(key) {
+                result[if key == "stop" { "stop_sequences" } else { key }] = value.clone();
+            }
+        }
+        if let Some(tools) = input.get("tools").and_then(Value::as_array) {
+            result["tools"] = Value::Array(tools.iter().map(|tool| {
+                let f = tool.get("function").unwrap_or(tool);
+                json!({"name":f.get("name"),"description":f.get("description"),"input_schema":f.get("parameters").cloned().unwrap_or(json!({"type":"object","properties":{}}))})
+            }).collect());
+        }
+        if let Some(choice) = input.get("tool_choice") {
+            result["tool_choice"] = if choice == "auto" || choice == "none" {
+                json!({"type":choice})
+            } else if choice == "required" {
+                json!({"type":"any"})
+            } else {
+                json!({"type":"tool","name":choice["function"]["name"]})
+            };
+        }
+        result
+    } else if from == "anthropic" && to == "openai" {
+        let mut output = Vec::new();
+        if let Some(system) = input.get("system") {
+            output.push(json!({"role":"system","content":system}));
+        }
+        for message in messages {
+            let role = message
+                .get("role")
+                .and_then(Value::as_str)
+                .unwrap_or("user");
+            let mut text_parts = Vec::new();
+            let mut tool_calls = Vec::new();
+            let mut tool_results = Vec::new();
+            let content = message.get("content").cloned().unwrap_or(Value::Null);
+            let blocks = content
+                .as_array()
+                .cloned()
+                .unwrap_or_else(|| vec![json!({"type":"text","text":content})]);
+            for block in blocks {
+                match block.get("type").and_then(Value::as_str).unwrap_or("text") {
+                    "text" => if let Some(text) = block.get("text").and_then(Value::as_str) { text_parts.push(text.to_string()); },
+                    "tool_use" => tool_calls.push(json!({"id":block.get("id"),"type":"function","function":{"name":block.get("name"),"arguments":block.get("input").cloned().unwrap_or(json!({})).to_string()}})),
+                    "tool_result" => tool_results.push(json!({"role":"tool","tool_call_id":block.get("tool_use_id"),"content":block.get("content")})),
+                    _ => {}
+                }
+            }
+            if !text_parts.is_empty() || !tool_calls.is_empty() {
+                let mut item = json!({"role":role,"content":if text_parts.is_empty() { Value::Null } else { json!(text_parts.join("\n")) }});
+                if !tool_calls.is_empty() {
+                    item["tool_calls"] = Value::Array(tool_calls);
+                }
+                output.push(item);
+            }
+            output.extend(tool_results);
+        }
+        let mut result = json!({"model":input.get("model"),"messages":output});
+        for (source, target) in [
+            ("max_tokens", "max_tokens"),
+            ("temperature", "temperature"),
+            ("top_p", "top_p"),
+            ("stop_sequences", "stop"),
+        ] {
+            if let Some(value) = input.get(source) {
+                result[target] = value.clone();
+            }
+        }
+        if let Some(tools) = input.get("tools").and_then(Value::as_array) {
+            result["tools"] = Value::Array(tools.iter().map(|tool| json!({"type":"function","function":{"name":tool.get("name"),"description":tool.get("description"),"parameters":tool.get("input_schema")}})).collect());
+        }
+        result
+    } else {
+        input.clone()
+    }
+}
+
+fn translate_response(
+    body: &[u8],
+    client_format: &str,
+    upstream_format: &str,
+    model: &str,
+) -> Bytes {
+    let value: Value = match serde_json::from_slice(body) {
+        Ok(v) => v,
+        Err(_) => return Bytes::copy_from_slice(body),
+    };
+    let translated = if client_format == "openai" && upstream_format == "anthropic" {
+        let content = value
+            .get("content")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        let mut text = String::new();
+        let mut calls = Vec::new();
+        for block in content {
+            match block.get("type").and_then(Value::as_str).unwrap_or("") {
+                "text" => text.push_str(block.get("text").and_then(Value::as_str).unwrap_or_default()),
+                "tool_use" => calls.push(json!({"id":block.get("id"),"type":"function","function":{"name":block.get("name"),"arguments":block.get("input").cloned().unwrap_or(json!({})).to_string()}})),
+                _ => {}
+            }
+        }
+        let mut message = json!({"role":"assistant","content":if text.is_empty() { Value::Null } else { json!(text) }});
+        if !calls.is_empty() {
+            message["tool_calls"] = Value::Array(calls);
+        }
+        json!({"id":value.get("id"),"object":"chat.completion","created":chrono::Utc::now().timestamp(),"model":value.get("model").and_then(Value::as_str).unwrap_or(model),"choices":[{"index":0,"message":message,"finish_reason":if value.get("stop_reason").and_then(Value::as_str)==Some("tool_use") {"tool_calls"} else {"stop"}}],"usage":{"prompt_tokens":value["usage"]["input_tokens"],"completion_tokens":value["usage"]["output_tokens"],"total_tokens":value["usage"]["input_tokens"].as_i64().unwrap_or(0)+value["usage"]["output_tokens"].as_i64().unwrap_or(0)}})
+    } else if client_format == "anthropic" && upstream_format == "openai" {
+        let choice = value
+            .get("choices")
+            .and_then(Value::as_array)
+            .and_then(|v| v.first())
+            .cloned()
+            .unwrap_or(json!({}));
+        let message = choice.get("message").cloned().unwrap_or(json!({}));
+        let mut content = Vec::new();
+        if let Some(text) = message
+            .get("content")
+            .and_then(Value::as_str)
+            .filter(|s| !s.is_empty())
+        {
+            content.push(json!({"type":"text","text":text}));
+        }
+        if let Some(calls) = message.get("tool_calls").and_then(Value::as_array) {
+            for call in calls {
+                let input = call["function"]["arguments"]
+                    .as_str()
+                    .and_then(|s| serde_json::from_str(s).ok())
+                    .unwrap_or_else(|| json!({}));
+                content.push(json!({"type":"tool_use","id":call.get("id"),"name":call["function"]["name"],"input":input}));
+            }
+        }
+        let usage = value.get("usage").cloned().unwrap_or(json!({}));
+        json!({"id":value.get("id"),"type":"message","role":"assistant","model":value.get("model").and_then(Value::as_str).unwrap_or(model),"content":content,"stop_reason":if message.get("tool_calls").is_some() {"tool_use"} else {"end_turn"},"stop_sequence":Value::Null,"usage":{"input_tokens":usage.get("prompt_tokens"),"output_tokens":usage.get("completion_tokens")}})
+    } else {
+        value
+    };
+    Bytes::from(serde_json::to_vec(&translated).unwrap_or_else(|_| body.to_vec()))
+}
+
+fn translated_response(
+    status: u16,
+    source_headers: &reqwest::header::HeaderMap,
+    body: Bytes,
+) -> Response {
+    let mut response = Response::new(Body::from(body));
+    *response.status_mut() = StatusCode::from_u16(status).unwrap_or(StatusCode::BAD_GATEWAY);
+    response.headers_mut().insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("application/json"),
+    );
+    for name in ["retry-after", "x-request-id", "request-id"] {
+        if let (Some(value), Ok(key)) = (
+            source_headers.get(name),
+            name.parse::<axum::http::HeaderName>(),
+        ) {
+            response.headers_mut().insert(key, value.clone());
+        }
+    }
+    response
 }
 
 fn multipart_field_range(

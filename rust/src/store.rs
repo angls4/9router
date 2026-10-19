@@ -11,6 +11,7 @@ pub struct Provider {
     pub api_format: String,
     pub models_json: String,
     pub enabled: i64,
+    pub connection_id: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -101,6 +102,9 @@ pub async fn initialize(db: &SqlitePool) -> Result<(), sqlx::Error> {
     sqlx::query("CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY CHECK(id=1), data TEXT NOT NULL)").execute(db).await?;
     sqlx::query("CREATE TABLE IF NOT EXISTS request_log (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, requested_model TEXT NOT NULL, routed_model TEXT NOT NULL, status INTEGER NOT NULL, elapsed_ms INTEGER NOT NULL)")
         .execute(db).await?;
+    sqlx::query("CREATE TABLE IF NOT EXISTS usageHistory (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT NOT NULL, provider TEXT, model TEXT, connectionId TEXT, apiKey TEXT, endpoint TEXT, promptTokens INTEGER DEFAULT 0, completionTokens INTEGER DEFAULT 0, cost REAL DEFAULT 0, status TEXT, tokens TEXT, meta TEXT)").execute(db).await?;
+    sqlx::query("CREATE TABLE IF NOT EXISTS requestDetails (id TEXT PRIMARY KEY, timestamp TEXT NOT NULL, provider TEXT, model TEXT, connectionId TEXT, status TEXT, data TEXT NOT NULL)").execute(db).await?;
+    sqlx::query("CREATE TABLE IF NOT EXISTS proxyPools (id TEXT PRIMARY KEY, isActive INTEGER DEFAULT 1, testStatus TEXT, data TEXT NOT NULL, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL)").execute(db).await?;
     Ok(())
 }
 
@@ -182,6 +186,101 @@ pub async fn list_providers(db: &SqlitePool) -> Result<Vec<Provider>, sqlx::Erro
             api_format,
             models_json,
             enabled: 1,
+            connection_id: Some(row.get::<String, _>("id")),
+        });
+    }
+    Ok(providers)
+}
+
+/// Credentials available to inference routing, including stored OAuth and
+/// imported access-token accounts. OAuth providers with nonstandard payloads
+/// still need a provider adapter; this list covers compatible endpoints.
+pub async fn list_routing_accounts(db: &SqlitePool) -> Result<Vec<Provider>, sqlx::Error> {
+    use sqlx::Row;
+    let rows = sqlx::query("SELECT id,provider,name,authType,isActive,priority,data FROM providerConnections WHERE isActive=1 AND authType IN ('apikey','api_key','oauth','access_token') ORDER BY COALESCE(priority,999),updatedAt")
+        .fetch_all(db).await?;
+    let mut providers = Vec::new();
+    for row in rows {
+        let data: serde_json::Value =
+            serde_json::from_str(&row.get::<String, _>("data")).unwrap_or_default();
+        let provider_id = row.get::<String, _>("provider");
+        let auth_type = row.get::<String, _>("authType");
+        let specific = data
+            .get("providerSpecificData")
+            .cloned()
+            .unwrap_or_default();
+        let registry = registry_provider(&provider_id);
+        let base_url = specific
+            .get("baseUrl")
+            .or_else(|| data.get("baseUrl"))
+            .and_then(serde_json::Value::as_str)
+            .or_else(|| {
+                specific
+                    .get("apiServerUrl")
+                    .and_then(serde_json::Value::as_str)
+            })
+            .or_else(|| registry.map(|p| p.base_url.as_str()))
+            .unwrap_or_default()
+            .to_string();
+        if base_url.is_empty() {
+            continue;
+        }
+        let api_path_prefix = specific
+            .get("apiPathPrefix")
+            .and_then(serde_json::Value::as_str)
+            .or_else(|| registry.map(|p| p.path_prefix.as_str()))
+            .unwrap_or("/v1")
+            .to_string();
+        let token = if auth_type == "apikey" || auth_type == "api_key" {
+            data.get("apiKey").or_else(|| data.get("accessToken"))
+        } else {
+            data.get("accessToken")
+        }
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+        if token.is_empty() {
+            continue;
+        }
+        let format = specific
+            .get("apiFormat")
+            .and_then(serde_json::Value::as_str);
+        let api_format = if format == Some("anthropic")
+            || provider_id == "anthropic"
+            || provider_id.starts_with("anthropic-compatible-")
+            || registry.is_some_and(|p| p.format == "claude")
+        {
+            "anthropic"
+        } else {
+            "openai"
+        };
+        let configured = specific
+            .get("enabledModels")
+            .and_then(serde_json::Value::as_array);
+        let models = configured
+            .filter(|v| !v.is_empty())
+            .cloned()
+            .unwrap_or_else(|| {
+                registry
+                    .map(|p| {
+                        p.models
+                            .iter()
+                            .cloned()
+                            .map(serde_json::Value::String)
+                            .collect()
+                    })
+                    .unwrap_or_default()
+            });
+        providers.push(Provider {
+            id: provider_id.clone(),
+            name: row.get::<Option<String>, _>("name").unwrap_or(provider_id),
+            base_url,
+            api_path_prefix,
+            api_key: token,
+            api_format: api_format.to_string(),
+            models_json: serde_json::to_string(&models).unwrap_or_else(|_| "[]".into()),
+            enabled: 1,
+            connection_id: Some(row.get::<String, _>("id")),
         });
     }
     Ok(providers)
@@ -365,6 +464,12 @@ pub async fn log_request(
     status: u16,
     elapsed_ms: u128,
 ) {
+    let timestamp = chrono::Utc::now().to_rfc3339();
+    let status_text = if status < 400 { "ok" } else { "error" };
+    let (provider, model) = routed.split_once('/').unwrap_or(("", requested));
+    let metadata = serde_json::json!({"elapsedMs":elapsed_ms.min(i64::MAX as u128) as i64,"routedModel":routed}).to_string();
+    let _ = sqlx::query("INSERT INTO usageHistory(timestamp,provider,model,endpoint,promptTokens,completionTokens,cost,status,tokens,meta) VALUES(?,?,?,?,0,0,0,?,?,?)")
+        .bind(timestamp).bind(if provider.is_empty(){None}else{Some(provider)}).bind(model).bind("Rust Gateway").bind(status_text).bind("{}").bind(metadata).execute(db).await;
     let _ = sqlx::query(
         "INSERT INTO request_log(requested_model,routed_model,status,elapsed_ms) VALUES(?,?,?,?)",
     )
