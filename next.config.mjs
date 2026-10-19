@@ -35,7 +35,9 @@ const nextConfig = {
   images: {
     unoptimized: true
   },
-  env: {},
+  env: {
+    NEXT_PUBLIC_NINEROUTER_RUST_ENABLED: routeInferenceThroughRust ? "true" : "false",
+  },
   experimental: {
     // #1529/#1572: LLM clients can send long context or base64 image payloads through /v1 rewrites.
     proxyClientMaxBodySize,
@@ -70,9 +72,23 @@ const nextConfig = {
       { source: "/codex/:path*", destination: "/api/rust/v1/responses" },
       { source: "/responses", destination: "/api/rust/v1/responses" },
       { source: "/systemone", destination: "/api/rust/v1/systemone" },
+      { source: "/api/providers/client", destination: "/api/rust/api/providers/client" },
+      { source: "/api/providers", destination: "/api/rust/api/providers" },
+      { source: "/api/providers/:id", destination: "/api/rust/api/providers/:id" },
+      { source: "/api/provider-nodes", destination: "/api/rust/api/provider-nodes" },
+      { source: "/api/provider-nodes/:id", destination: "/api/rust/api/provider-nodes/:id" },
+      { source: "/api/usage/logs", destination: "/api/rust/api/usage/logs" },
+      { source: "/api/usage/request-logs", destination: "/api/rust/api/usage/request-logs" },
+      ...["combos", "keys", "models", "models/alias", "models/custom", "models/disabled", "settings", "pricing"].map((path) => ({
+        source: `/api/${path}`,
+        destination: `/api/rust/api/${path}`,
+      })),
+      ...["combos", "keys"].map((path) => ({
+        source: `/api/${path}/:id`,
+        destination: `/api/rust/api/${path}/:id`,
+      })),
     ] : [];
-    return [
-      ...rustRoutes,
+    const nodeRoutes = [
       {
         source: "/v1/v1/:path*",
         destination: "/api/v1/:path*"
@@ -110,6 +126,11 @@ const nextConfig = {
         destination: "/api/v1"
       }
     ];
+    return {
+      beforeFiles: rustRoutes,
+      afterFiles: nodeRoutes,
+      fallback: [],
+    };
   }
 };
 

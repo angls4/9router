@@ -17,6 +17,11 @@ async function forward(request, context) {
   for (const [name, value] of request.headers) {
     if (!HOP_BY_HOP.has(name.toLowerCase())) headers.set(name, value);
   }
+  // Dashboard requests have already passed Node's session guard. When the Rust
+  // listener also has a gateway key configured, authenticate this local hop.
+  if (path[0] === "api" && process.env.NINEROUTER_API_KEY) {
+    headers.set("authorization", `Bearer ${process.env.NINEROUTER_API_KEY}`);
+  }
 
   try {
     const response = await fetch(target, {

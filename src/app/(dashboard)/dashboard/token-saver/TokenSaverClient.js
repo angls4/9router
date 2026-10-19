@@ -432,7 +432,9 @@ export default function TokenSaverClient() {
           setPonytailLevel(data.ponytailLevel || "full");
           setPxpipeEnabled(!!data.pxpipeEnabled);
           if (typeof data.pxpipeMinChars === "number") setPxpipeMinChars(data.pxpipeMinChars);
-          refreshHeadroomStatus();
+          if (process.env.NEXT_PUBLIC_NINEROUTER_RUST_ENABLED !== "true") {
+            refreshHeadroomStatus();
+          }
           // PRD: run the PXPIPE health check automatically when the page opens
           refreshPxpipeStatus().then(runPxpipeHealth);
         }
@@ -506,6 +508,8 @@ export default function TokenSaverClient() {
             onChange={() => handleRtkEnabled(!rtkEnabled)}
           />
         </div>
+        {process.env.NEXT_PUBLIC_NINEROUTER_RUST_ENABLED !== "true" && (
+        <>
         <div className="flex items-center justify-between py-4 gap-4 flex-wrap">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3 flex-wrap">
@@ -639,6 +643,8 @@ export default function TokenSaverClient() {
               adds ~1 GB (torch + huggingface-hub).
             </p>
           </div>
+        )}
+        </>
         )}
         <div className="flex items-center justify-between pt-4 border-t border-border gap-4 flex-wrap">
           <div className="min-w-0 flex-1">
@@ -789,6 +795,7 @@ export default function TokenSaverClient() {
         )}
       </Card>
 
+      {process.env.NEXT_PUBLIC_NINEROUTER_RUST_ENABLED !== "true" && (
       <Modal
         isOpen={showHeadroomInstallModal}
         title={headroomRunning ? "Headroom" : "Setup Headroom"}
@@ -909,6 +916,7 @@ export default function TokenSaverClient() {
           </div>
         </div>
       </Modal>
+      )}
 
       <Modal
         isOpen={false}
