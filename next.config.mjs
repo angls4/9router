@@ -86,7 +86,7 @@ const nextConfig = {
       { source: "/api/proxy-pools", destination: "/api/rust/api/proxy-pools" },
       { source: "/api/proxy-pools/:id/test", destination: "/api/rust/api/proxy-pools/:id/test" },
       { source: "/api/proxy-pools/:id", destination: "/api/rust/api/proxy-pools/:id" },
-      ...["load", "save", "translate"].map((path) => ({
+      ...["load", "save", "translate", "send"].map((path) => ({
         source: `/api/translator/${path}`,
         destination: `/api/rust/api/translator/${path}`,
       })),
@@ -94,6 +94,8 @@ const nextConfig = {
         source: `/api/media-providers/tts/${provider}/voices`,
         destination: `/api/rust/api/media-providers/tts/${provider}/voices`,
       })),
+      { source: "/api/mcp/:plugin/sse", destination: "/api/rust/api/mcp/:plugin/sse" },
+      { source: "/api/mcp/:plugin/message", destination: "/api/rust/api/mcp/:plugin/message" },
       ...["combos", "keys", "models", "models/alias", "models/custom", "models/disabled", "settings", "pricing"].map((path) => ({
         source: `/api/${path}`,
         destination: `/api/rust/api/${path}`,

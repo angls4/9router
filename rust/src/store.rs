@@ -12,6 +12,7 @@ pub struct Provider {
     pub models_json: String,
     pub enabled: i64,
     pub connection_id: Option<String>,
+    pub auth_type: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -187,6 +188,7 @@ pub async fn list_providers(db: &SqlitePool) -> Result<Vec<Provider>, sqlx::Erro
             models_json,
             enabled: 1,
             connection_id: Some(row.get::<String, _>("id")),
+            auth_type: "apikey".into(),
         });
     }
     Ok(providers)
@@ -220,6 +222,7 @@ pub async fn list_routing_accounts(db: &SqlitePool) -> Result<Vec<Provider>, sql
                     .and_then(serde_json::Value::as_str)
             })
             .or_else(|| registry.map(|p| p.base_url.as_str()))
+            .or_else(|| (provider_id == "claude").then_some("https://api.anthropic.com"))
             .unwrap_or_default()
             .to_string();
         if base_url.is_empty() {
@@ -229,6 +232,7 @@ pub async fn list_routing_accounts(db: &SqlitePool) -> Result<Vec<Provider>, sql
             .get("apiPathPrefix")
             .and_then(serde_json::Value::as_str)
             .or_else(|| registry.map(|p| p.path_prefix.as_str()))
+            .or_else(|| (provider_id == "claude").then_some("/v1"))
             .unwrap_or("/v1")
             .to_string();
         let token = if auth_type == "apikey" || auth_type == "api_key" {
@@ -281,6 +285,7 @@ pub async fn list_routing_accounts(db: &SqlitePool) -> Result<Vec<Provider>, sql
             models_json: serde_json::to_string(&models).unwrap_or_else(|_| "[]".into()),
             enabled: 1,
             connection_id: Some(row.get::<String, _>("id")),
+            auth_type,
         });
     }
     Ok(providers)

@@ -9,14 +9,15 @@ The Rust service currently includes:
 - Basic non-streaming OpenAI Chat Completions ↔ Anthropic Messages conversion
 - Provider and model configuration in SQLite
 - Dashboard APIs for provider connections/nodes, settings, API keys, combos, model aliases/custom/disabled models, pricing overrides, proxy-pool CRUD, translator diagnostics, media voice catalogs, and usage analytics
-- OAuth and imported access-token accounts in priority-ordered routing, with `x-connection-id` account pinning
+- OAuth and imported access-token accounts in priority-ordered routing, with `x-connection-id` account pinning and refresh-token rotation for Claude, Codex, Gemini CLI, and accounts that store a standard token endpoint in provider settings
 - Usage summary/chart/detail endpoints backed by the shared `usageHistory` and `requestDetails` tables; Rust gateway requests append basic usage rows
+- Local Browser MCP stdio-to-SSE bridge for the fixed `browsermcp` plugin
 - Ordered fallback combos with retries on network errors, HTTP 408, 409, 429, and 5xx
 - Optional gateway bearer-key authentication
 - Recent request log and a browser UI at `/`
 - JSON and multipart request forwarding, including model rewriting
 
-The existing Node/Next.js app remains the frontend and shares its existing `DATA_DIR/db/data.sqlite` database with Rust. The Rust build routes the supported dashboard data APIs through Rust. Headroom controls are hidden in the Rust frontend build and its settings are omitted from Rust responses. OAuth routing uses stored credentials, but provider-specific token refresh, OAuth login/import flows, CLI filesystem adapters, MCP child-process bridges, tunnel lifecycle management, proxy-provider deployment, translator streaming/send/log APIs, media voice catalogs outside Deepgram/ElevenLabs/Inworld/MiniMax, and provider quota/reset APIs still run in Node. The current cross-protocol converter handles basic non-streaming chat/messages text and tool calls; streaming conversion, image/audio blocks, and provider-specific protocol variants are not complete. Rust's usage rows currently record request counts and latency, not upstream token usage or cost. Credentials are stored in the shared SQLite database, so protect its data directory.
+The existing Node/Next.js app remains the frontend and shares its existing `DATA_DIR/db/data.sqlite` database with Rust. The Rust build routes the supported dashboard data APIs through Rust. Headroom controls are hidden in the Rust frontend build and its settings are omitted from Rust responses. OAuth login/import flows, providers with custom OAuth or inference protocols, CLI filesystem adapters, Cowork MCP registry/tool management, tunnel lifecycle management, proxy-provider deployment, translator console log APIs, media voice catalogs outside Deepgram/ElevenLabs/Inworld/MiniMax, and provider quota/reset APIs still run in Node. The current cross-protocol converter handles basic non-streaming chat/messages text and tool calls; streaming conversion, image/audio blocks, and provider-specific protocol variants are not complete. Rust's usage rows currently record request counts and latency, not upstream token usage or cost. Credentials are stored in the shared SQLite database, so protect its data directory.
 
 ## Run locally
 

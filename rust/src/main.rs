@@ -57,6 +57,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         api_key: env::var("NINEROUTER_API_KEY")
             .ok()
             .filter(|key| !key.is_empty()),
+        oauth_locks: Default::default(),
+        mcp_entries: Default::default(),
     };
     let app = server::router(state).layer(TraceLayer::new_for_http());
     let addr: SocketAddr = format!(

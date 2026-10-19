@@ -1,4 +1,11 @@
 use std::time::Instant;
+use std::{
+    collections::HashMap,
+    sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    },
+};
 
 use axum::{
     Json, Router,
@@ -26,6 +33,51 @@ pub struct AppState {
     pub db: SqlitePool,
     pub http: reqwest::Client,
     pub api_key: Option<String>,
+    pub oauth_locks: Arc<tokio::sync::Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>>,
+    pub mcp_entries: Arc<tokio::sync::Mutex<HashMap<String, McpEntry>>>,
+}
+
+#[derive(Clone)]
+pub(crate) struct McpEntry {
+    child: Arc<tokio::sync::Mutex<tokio::process::Child>>,
+    stdin: Arc<tokio::sync::Mutex<tokio::process::ChildStdin>>,
+    messages: tokio::sync::broadcast::Sender<String>,
+    sessions: Arc<AtomicUsize>,
+}
+
+struct McpSessionGuard {
+    state: AppState,
+    plugin: String,
+    sessions: Arc<AtomicUsize>,
+    child: Arc<tokio::sync::Mutex<tokio::process::Child>>,
+}
+
+impl Drop for McpSessionGuard {
+    fn drop(&mut self) {
+        let state = self.state.clone();
+        let plugin = self.plugin.clone();
+        let sessions = self.sessions.clone();
+        let child = self.child.clone();
+        let cleanup = async move {
+            let removed = {
+                let mut entries = state.mcp_entries.lock().await;
+                let last_session = sessions.fetch_sub(1, Ordering::AcqRel) <= 1;
+                last_session
+                    && entries
+                        .get(&plugin)
+                        .is_some_and(|current| Arc::ptr_eq(&current.sessions, &sessions))
+                    && entries.remove(&plugin).is_some()
+            };
+            if removed {
+                let mut child = child.lock().await;
+                let _ = child.start_kill();
+                let _ = child.wait().await;
+            }
+        };
+        if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            handle.spawn(cleanup);
+        }
+    }
 }
 
 pub fn router(state: AppState) -> Router {
@@ -135,8 +187,17 @@ pub fn router(state: AppState) -> Router {
             axum::routing::post(api_translator_translate),
         )
         .route(
+            "/api/translator/send",
+            axum::routing::post(api_translator_send),
+        )
+        .route(
             "/api/media-providers/tts/{provider}/voices",
             get(api_media_tts_voices),
+        )
+        .route("/api/mcp/{plugin}/sse", get(api_mcp_sse))
+        .route(
+            "/api/mcp/{plugin}/message",
+            axum::routing::post(api_mcp_message),
         )
         .route(
             "/admin/providers/{id}",
@@ -1488,22 +1549,104 @@ async fn api_translator_translate(
         let model = body["model"]
             .as_str()
             .ok_or_else(|| ApiError::bad_request("provider and model required"))?;
-        let target_format = if provider == "anthropic" || provider.starts_with("claude") {
-            "anthropic"
-        } else {
-            "openai"
-        };
+        let connection = store::list_routing_accounts(&s.db)
+            .await?
+            .into_iter()
+            .find(|candidate| candidate.id == provider)
+            .ok_or_else(|| {
+                ApiError::bad_request(format!("No active connection for provider: {provider}"))
+            })?;
+        let target_format = connection.api_format.as_str();
         let mut result = if target_format == "openai" {
             client_body.clone()
         } else {
             translate_request(&client_body, "openai", "anthropic")
         };
         result["model"] = json!(model);
+        let path = if target_format == "anthropic" {
+            "messages"
+        } else {
+            "chat/completions"
+        };
+        let upstream_path = format!("{}/{}", connection.api_path_prefix.trim_matches('/'), path);
+        let url = endpoint_url(&connection.base_url, &upstream_path, None)?;
+        let mut headers = serde_json::Map::new();
+        if target_format == "anthropic" {
+            headers.insert("anthropic-version".into(), json!("2023-06-01"));
+            if connection.auth_type == "oauth" {
+                headers.insert(
+                    "authorization".into(),
+                    json!(format!("Bearer {}", connection.api_key)),
+                );
+                headers.insert(
+                    "anthropic-beta".into(),
+                    json!("oauth-2025-04-20,claude-code-20250219"),
+                );
+            } else {
+                headers.insert("x-api-key".into(), json!(connection.api_key));
+            }
+        } else {
+            headers.insert(
+                "authorization".into(),
+                json!(format!("Bearer {}", connection.api_key)),
+            );
+        }
         return Ok(Json(
-            json!({"success":true,"result":{"url":format!("{}/{}/{}",provider,target_format,model),"headers":{},"body":result}}),
+            json!({"success":true,"result":{"url":url,"headers":headers,"body":result}}),
         ));
     }
     Err(ApiError::bad_request("Invalid step (1-3)"))
+}
+
+async fn api_translator_send(
+    State(state): State<AppState>,
+    OriginalUri(_uri): OriginalUri,
+    mut headers: HeaderMap,
+    Json(input): Json<Value>,
+) -> Result<Response, ApiError> {
+    let provider = input["provider"]
+        .as_str()
+        .ok_or_else(|| ApiError::bad_request("provider, model, and body required"))?;
+    let model = input["model"]
+        .as_str()
+        .ok_or_else(|| ApiError::bad_request("provider, model, and body required"))?;
+    let mut body = input
+        .get("body")
+        .cloned()
+        .ok_or_else(|| ApiError::bad_request("provider, model, and body required"))?;
+    if !body.is_object() {
+        return Err(ApiError::bad_request("body must be a JSON object"));
+    }
+    let requested_model = if model.contains('/') {
+        model.to_string()
+    } else {
+        format!("{provider}/{model}")
+    };
+    body["model"] = json!(requested_model);
+    headers.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("application/json"),
+    );
+    let anthropic_request = body.get("system").is_some() || body.get("max_tokens").is_some();
+    let path = if anthropic_request {
+        "messages"
+    } else {
+        "chat/completions"
+    };
+    let uri = if anthropic_request {
+        axum::http::Uri::from_static("/v1/messages")
+    } else {
+        axum::http::Uri::from_static("/v1/chat/completions")
+    };
+    proxy(
+        State(state),
+        OriginalUri(uri),
+        Path(path.to_string()),
+        Method::POST,
+        headers,
+        Bytes::from(serde_json::to_vec(&body).map_err(|e| ApiError::bad_request(e.to_string()))?),
+    )
+    .await
 }
 
 async fn api_media_tts_voices(
@@ -1732,6 +1875,175 @@ fn query_value<'a>(query: &'a str, key: &str) -> Option<&'a str> {
         let (k, v) = part.split_once('=')?;
         (k == key).then_some(v)
     })
+}
+
+async fn get_or_spawn_mcp(state: &AppState, plugin: &str) -> Result<McpEntry, ApiError> {
+    if plugin != "browsermcp" {
+        return Err(ApiError::not_found(format!("Unknown plugin: {plugin}")));
+    }
+    let mut entries = state.mcp_entries.lock().await;
+    if let Some(entry) = entries.get(plugin) {
+        let exited = entry
+            .child
+            .lock()
+            .await
+            .try_wait()
+            .map_err(|e| ApiError::upstream(e.to_string()))?
+            .is_some();
+        if !exited {
+            return Ok(entry.clone());
+        }
+        entries.remove(plugin);
+    }
+    let mut child = tokio::process::Command::new("npx")
+        .args(["-y", "@browsermcp/mcp@latest"])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .kill_on_drop(true)
+        .spawn()
+        .map_err(|e| {
+            ApiError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to start MCP plugin: {e}"),
+            )
+        })?;
+    let stdin = child
+        .stdin
+        .take()
+        .ok_or_else(|| ApiError::upstream("MCP plugin stdin unavailable"))?;
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| ApiError::upstream("MCP plugin stdout unavailable"))?;
+    let (messages, _) = tokio::sync::broadcast::channel(128);
+    let entry = McpEntry {
+        child: Arc::new(tokio::sync::Mutex::new(child)),
+        stdin: Arc::new(tokio::sync::Mutex::new(stdin)),
+        messages: messages.clone(),
+        sessions: Arc::new(AtomicUsize::new(0)),
+    };
+    entries.insert(plugin.to_string(), entry.clone());
+    tokio::spawn(async move {
+        use tokio::io::AsyncBufReadExt;
+        let mut lines = tokio::io::BufReader::new(stdout).lines();
+        loop {
+            match lines.next_line().await {
+                Ok(Some(line)) if !line.trim().is_empty() => {
+                    let _ = messages.send(filter_mcp_frame(&line));
+                }
+                Ok(Some(_)) => {}
+                Ok(None) | Err(_) => break,
+            }
+        }
+    });
+    Ok(entry)
+}
+
+fn filter_mcp_frame(raw: &str) -> String {
+    const MAX_TEXT_CHARS: usize = 50_000;
+    let Ok(mut frame) = serde_json::from_str::<Value>(raw) else {
+        return raw.to_string();
+    };
+    let Some(content) = frame["result"]["content"].as_array_mut() else {
+        return raw.to_string();
+    };
+    let mut changed = false;
+    for item in content {
+        if item["type"] == "text" {
+            if let Some(text) = item["text"].as_str() {
+                if text.chars().count() > MAX_TEXT_CHARS {
+                    let preview: String = text.chars().take(MAX_TEXT_CHARS - 200).collect();
+                    item["text"] = json!(format!(
+                        "{preview}\n\n... [text truncated by 9Router MCP bridge]"
+                    ));
+                    changed = true;
+                }
+            }
+        }
+    }
+    if changed {
+        serde_json::to_string(&frame).unwrap_or_else(|_| raw.to_string())
+    } else {
+        raw.to_string()
+    }
+}
+
+async fn api_mcp_sse(
+    State(state): State<AppState>,
+    Path(plugin): Path<String>,
+) -> Result<Sse<impl futures_util::Stream<Item = Result<Event, std::convert::Infallible>>>, ApiError>
+{
+    let entry = get_or_spawn_mcp(&state, &plugin).await?;
+    entry.sessions.fetch_add(1, Ordering::AcqRel);
+    let receiver = entry.messages.subscribe();
+    let session_id = uuid::Uuid::new_v4();
+    let guard = McpSessionGuard {
+        state,
+        plugin: plugin.clone(),
+        sessions: entry.sessions.clone(),
+        child: entry.child.clone(),
+    };
+    let endpoint = Event::default()
+        .event("endpoint")
+        .data(format!("/api/mcp/{plugin}/message?sessionId={session_id}"));
+    let messages =
+        futures_util::stream::unfold((receiver, guard), |(mut receiver, guard)| async move {
+            loop {
+                match receiver.recv().await {
+                    Ok(message) => {
+                        return Some((
+                            Ok(Event::default().event("message").data(message)),
+                            (receiver, guard),
+                        ));
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => return None,
+                }
+            }
+        });
+    let stream = futures_util::stream::once(async move { Ok(endpoint) }).chain(messages);
+    Ok(Sse::new(stream).keep_alive(
+        KeepAlive::new()
+            .interval(std::time::Duration::from_secs(25))
+            .text("ping"),
+    ))
+}
+
+async fn api_mcp_message(
+    State(state): State<AppState>,
+    Path(plugin): Path<String>,
+    Json(message): Json<Value>,
+) -> Result<StatusCode, ApiError> {
+    if plugin != "browsermcp" {
+        return Err(ApiError::not_found(format!("Unknown plugin: {plugin}")));
+    }
+    let entry = state
+        .mcp_entries
+        .lock()
+        .await
+        .get(&plugin)
+        .cloned()
+        .ok_or_else(|| {
+            ApiError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("MCP bridge is not running: {plugin}"),
+            )
+        })?;
+    let mut stdin = entry.stdin.lock().await;
+    let mut frame =
+        serde_json::to_vec(&message).map_err(|e| ApiError::bad_request(e.to_string()))?;
+    frame.push(b'\n');
+    use tokio::io::AsyncWriteExt;
+    stdin
+        .write_all(&frame)
+        .await
+        .map_err(|e| ApiError::upstream(e.to_string()))?;
+    stdin
+        .flush()
+        .await
+        .map_err(|e| ApiError::upstream(e.to_string()))?;
+    Ok(StatusCode::ACCEPTED)
 }
 
 async fn api_usage_chart(
@@ -2669,10 +2981,15 @@ async fn proxy(
         }
     }
     let mut last_error: Option<String> = None;
-    for (index, (target, provider, model)) in candidates.iter().enumerate() {
+    let candidate_count = candidates.len();
+    for (index, (target, mut provider, model)) in candidates.into_iter().enumerate() {
+        if let Err(error) = refresh_oauth_account(&state, &mut provider).await {
+            last_error = Some(error);
+            continue;
+        }
         let mut outbound = payload.clone();
         if let Some(obj) = outbound.as_object_mut() {
-            obj.insert("model".into(), Value::String(model.to_string()));
+            obj.insert("model".into(), Value::String(model.clone()));
         }
         let translating = (request_format == "anthropic") != (provider.api_format == "anthropic")
             && (path == "messages" || path == "chat/completions");
@@ -2714,7 +3031,7 @@ async fn proxy(
         {
             Ok(upstream) => {
                 let status = upstream.status().as_u16();
-                if is_retryable(status) && index + 1 < candidates.len() {
+                if is_retryable(status) && index + 1 < candidate_count {
                     last_error = Some(format!("Upstream returned HTTP {status}"));
                     let _ = upstream.bytes().await;
                     continue;
@@ -3042,6 +3359,168 @@ async fn resolve_targets(db: &SqlitePool, model: &str) -> Result<Vec<String>, Ap
     ))
 }
 
+async fn refresh_oauth_account(state: &AppState, provider: &mut Provider) -> Result<(), String> {
+    if provider.auth_type != "oauth" {
+        return Ok(());
+    }
+    let Some(connection_id) = provider.connection_id.clone() else {
+        return Ok(());
+    };
+    let lock = {
+        let mut locks = state.oauth_locks.lock().await;
+        locks
+            .entry(connection_id.clone())
+            .or_insert_with(|| Arc::new(tokio::sync::Mutex::new(())))
+            .clone()
+    };
+    let _guard = lock.lock().await;
+    let row =
+        sqlx::query("SELECT data,authType FROM providerConnections WHERE id=? AND isActive=1")
+            .bind(&connection_id)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(|e| e.to_string())?;
+    let Some(row) = row else {
+        return Err("OAuth account is no longer active".into());
+    };
+    use sqlx::Row;
+    let auth_type: String = row.try_get("authType").unwrap_or_default();
+    if auth_type != "oauth" {
+        return Ok(());
+    }
+    let raw: String = row.try_get("data").unwrap_or_default();
+    let mut data: Value = serde_json::from_str(&raw).unwrap_or_else(|_| json!({}));
+    let specific = data
+        .get("providerSpecificData")
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    let refresh_token = data["refreshToken"].as_str().unwrap_or_default();
+    if refresh_token.is_empty() {
+        return Ok(());
+    }
+    let token_url = specific["tokenUrl"]
+        .as_str()
+        .or(specific["refreshUrl"].as_str())
+        .or(data["tokenUrl"].as_str())
+        .or_else(|| match provider.id.as_str() {
+            "claude" => Some("https://api.anthropic.com/v1/oauth/token"),
+            "codex" => Some("https://auth.openai.com/oauth/token"),
+            "gemini-cli" => Some("https://oauth2.googleapis.com/token"),
+            _ => None,
+        });
+    let Some(token_url) = token_url else {
+        return Ok(());
+    };
+    let expiry = data["expiresAt"]
+        .as_str()
+        .and_then(|value| {
+            chrono::DateTime::parse_from_rfc3339(value)
+                .ok()
+                .map(|t| t.timestamp())
+                .or_else(|| value.parse::<i64>().ok())
+        })
+        .or_else(|| data["expiresAt"].as_i64())
+        .or_else(|| data["tokenExpiresAt"].as_i64())
+        .map(|value| {
+            if value > 10_000_000_000 {
+                value / 1000
+            } else {
+                value
+            }
+        });
+    let Some(expiry) = expiry else {
+        return Ok(());
+    };
+    if expiry > chrono::Utc::now().timestamp() + 90 {
+        provider.api_key = data["accessToken"]
+            .as_str()
+            .unwrap_or(&provider.api_key)
+            .to_string();
+        return Ok(());
+    }
+    let client_id = specific["clientId"]
+        .as_str()
+        .or(specific["oauthClientId"].as_str())
+        .or(data["clientId"].as_str())
+        .or_else(|| match provider.id.as_str() {
+            "claude" => Some("9d1c250a-e61b-44d9-88ed-5944d1962f5e"),
+            "codex" => Some("app_EMoamEEZ73f0CkXaXp7hrann"),
+            "gemini-cli" => {
+                Some("681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com")
+            }
+            _ => None,
+        });
+    let client_secret = specific["clientSecret"]
+        .as_str()
+        .or(data["clientSecret"].as_str())
+        .or_else(|| (provider.id == "gemini-cli").then_some("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"));
+    let mut form = vec![
+        ("grant_type", "refresh_token".to_string()),
+        ("refresh_token", refresh_token.to_string()),
+    ];
+    if let Some(client_id) = client_id {
+        form.push(("client_id", client_id.to_string()));
+    }
+    if let Some(client_secret) = client_secret {
+        form.push(("client_secret", client_secret.to_string()));
+    }
+    let request = state
+        .http
+        .post(token_url)
+        .header(header::ACCEPT, "application/json");
+    let response = if provider.id == "claude" {
+        request.json(&json!({"grant_type":"refresh_token","refresh_token":refresh_token,"client_id":client_id})).send().await
+    } else {
+        let encoded = serde_urlencoded::to_string(&form).map_err(|e| e.to_string())?;
+        request.header(header::CONTENT_TYPE, "application/x-www-form-urlencoded").body(encoded).send().await
+    }.map_err(|e| format!("OAuth token refresh failed: {e}"))?;
+    if !response.status().is_success() {
+        return Err(format!(
+            "OAuth token refresh returned HTTP {}",
+            response.status()
+        ));
+    }
+    let refreshed: Value = response
+        .json()
+        .await
+        .map_err(|e| format!("Invalid OAuth refresh response: {e}"))?;
+    let Some(access_token) = refreshed
+        .get("access_token")
+        .or_else(|| refreshed.get("accessToken"))
+        .and_then(Value::as_str)
+    else {
+        return Err("OAuth refresh response did not contain an access token".into());
+    };
+    data["accessToken"] = json!(access_token);
+    if let Some(rotated) = refreshed
+        .get("refresh_token")
+        .or_else(|| refreshed.get("refreshToken"))
+        .and_then(Value::as_str)
+    {
+        data["refreshToken"] = json!(rotated);
+    }
+    if let Some(seconds) = refreshed
+        .get("expires_in")
+        .or_else(|| refreshed.get("expiresIn"))
+        .and_then(Value::as_i64)
+    {
+        data["expiresAt"] =
+            json!((chrono::Utc::now() + chrono::Duration::seconds(seconds)).to_rfc3339());
+        data["expiresIn"] = json!(seconds);
+    }
+    let now = chrono::Utc::now().to_rfc3339();
+    data["lastRefreshAt"] = json!(now);
+    sqlx::query("UPDATE providerConnections SET data=?,updatedAt=? WHERE id=?")
+        .bind(data.to_string())
+        .bind(now)
+        .bind(&connection_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| e.to_string())?;
+    provider.api_key = access_token.to_string();
+    Ok(())
+}
+
 async fn send_upstream(
     state: &AppState,
     provider: &Provider,
@@ -3059,12 +3538,30 @@ async fn send_upstream(
             if !provider.api_key.is_empty() {
                 let value = HeaderValue::from_str(&provider.api_key)
                     .map_err(|_| "Invalid upstream API key".to_string())?;
-                headers.insert("x-api-key", value);
+                if provider.auth_type == "oauth" {
+                    headers.insert(
+                        header::AUTHORIZATION,
+                        HeaderValue::from_str(&format!("Bearer {}", provider.api_key))
+                            .map_err(|_| "Invalid OAuth access token".to_string())?,
+                    );
+                    headers.insert(
+                        "anthropic-beta",
+                        HeaderValue::from_static("oauth-2025-04-20,claude-code-20250219"),
+                    );
+                    headers.insert(
+                        "anthropic-dangerous-direct-browser-access",
+                        HeaderValue::from_static("true"),
+                    );
+                } else {
+                    headers.insert("x-api-key", value);
+                }
             }
             headers
                 .entry("anthropic-version")
                 .or_insert(HeaderValue::from_static("2023-06-01"));
-            headers.remove(header::AUTHORIZATION);
+            if provider.auth_type != "oauth" {
+                headers.remove(header::AUTHORIZATION);
+            }
         }
         _ if !provider.api_key.is_empty() => {
             let value = HeaderValue::from_str(&format!("Bearer {}", provider.api_key))
