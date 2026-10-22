@@ -1,23 +1,30 @@
 # 9Router Rust
 
-9Router Rust is a Rust model gateway with a built-in local management page. The existing Node/Next.js app can remain the frontend and route `/v1` traffic to Rust. It has no Headroom integration.
+9Router Rust is the model gateway and can serve a static Next.js export directly, with no Next.js server process at runtime. `npm run build:rust-static` produces the static export. The migration is in progress: many Next.js API handlers and authentication flows still need Rust equivalents before a Rust-only deployment is complete.
 
 The Rust service currently includes:
 
 - OpenAI-compatible `/v1` proxying with unbuffered SSE streaming
-- Native Anthropic request forwarding (`/v1/messages`)
+- Native Anthropic request forwarding (`/v1/messages`) and the `/v1/messages/count_tokens` character-based token estimate endpoint
 - Basic non-streaming OpenAI Chat Completions ↔ Anthropic Messages conversion
 - Provider and model configuration in SQLite
-- Dashboard APIs for provider connections/nodes, settings, API keys, combos, model aliases/custom/disabled models, pricing overrides, proxy-pool CRUD, translator diagnostics, media voice catalogs, and usage analytics
+- Dashboard APIs for provider connections/nodes and compatible model lists, settings and proxy checks, password login/session checks and local password reset, public app-version checks, API keys, Codex and Cursor access-token, GitLab PAT, iFlow cookie, Kiro API key, Xiaomi MiMo API-key/session, and Zed session imports, combos and combo presets, the 1,155-entry model catalog, model tests/availability/cooldowns, provider request-header overrides, suggested model catalogs, Kilo free models, pricing overrides, proxy-pool CRUD, translator diagnostics and Rust tracing log streaming, media voice catalogs, and usage analytics
+- Model capability sync status and manual refresh at `/api/models/catalog-sync`, with an automatic 24-hour refresh from models.dev
 - OAuth and imported access-token accounts in priority-ordered routing, with `x-connection-id` account pinning and refresh-token rotation for Claude, Codex, Gemini CLI, and accounts that store a standard token endpoint in provider settings
 - Usage summary/chart/detail endpoints backed by the shared `usageHistory` and `requestDetails` tables; Rust gateway requests append basic usage rows
+- Per-connection Claude OAuth and Codex OAuth/access-token quota reads, including model-specific windows; Codex reset-credit details and user-triggered credit redemption are also available
 - Local Browser MCP stdio-to-SSE bridge for the fixed `browsermcp` plugin
+- Cached, filtered Cowork MCP registry discovery at `/api/cli-tools/cowork-mcp-registry` and public-server tool probing at `/api/cli-tools/cowork-mcp-tools` (remote probes reject private DNS results and pin resolved public addresses)
 - Ordered fallback combos with retries on network errors, HTTP 408, 409, 429, and 5xx
 - Optional gateway bearer-key authentication
 - Recent request log and a browser UI at `/`
 - JSON and multipart request forwarding, including model rewriting
+- Streaming forwarding for opaque request bodies with `x-9router-model` when routing resolves to one upstream account; JSON and multipart bodies remain buffered for parsing and rewriting
+- Static frontend file serving from `NINEROUTER_STATIC_DIR`, including SPA fallback, path traversal protection, cache headers for Next.js assets, and chunked file reads
 
-The existing Node/Next.js app remains the frontend and shares its existing `DATA_DIR/db/data.sqlite` database with Rust. The Rust build routes the supported dashboard data APIs through Rust. Headroom controls are hidden in the Rust frontend build and its settings are omitted from Rust responses. OAuth login/import flows, providers with custom OAuth or inference protocols, CLI filesystem adapters, Cowork MCP registry/tool management, tunnel lifecycle management, proxy-provider deployment, translator console log APIs, media voice catalogs outside Deepgram/ElevenLabs/Inworld/MiniMax, and provider quota/reset APIs still run in Node. The current cross-protocol converter handles basic non-streaming chat/messages text and tool calls; streaming conversion, image/audio blocks, and provider-specific protocol variants are not complete. Rust's usage rows currently record request counts and latency, not upstream token usage or cost. Credentials are stored in the shared SQLite database, so protect its data directory.
+Run `npm run build:rust-static` to regenerate Rust's 1,155-entry model catalog and generate `out/` as a static export; the script temporarily disables Next.js API routes, middleware, and the Node-only bootstrap during the build, then restores the source files. Static mode sets `output: export`, adds trailing slashes, and omits runtime rewrites. After building, `./start-rust.sh` automatically serves `out/` and the supported same-origin APIs from Rust; set `NINEROUTER_STATIC_DIR` to override the directory. Dynamic provider, media, CLI, and combo pages have static build parameters; custom provider, embedding, and combo details use query IDs. The static build currently exports all 310 pages. Run `npm run build:rust` after the export to compile the updated catalog into the Rust binary.
+
+The migration is not complete. SAML login redirects and callbacks, remaining OAuth/device-code flows, AWS Bedrock credential validation, full catalog/model capability parity, CLI filesystem adapters, authenticated Cowork MCP tool management, proxy-provider deployment, and specialized audio/image/video/search/web-fetch behavior are not yet implemented in Rust, so those features are unavailable in a Rust-only deployment. OIDC login redirects/callbacks and configuration tests, SAML configuration tests and service-provider metadata, read-only Cowork MCP registry discovery, and Cowork MCP public-server tool probing are available. Password reset clears the stored password hash and is restricted to an authenticated request from a loopback connection. Translator console logs expose Rust tracing events through an in-memory buffer, capped at 1,000 lines; logs emitted by a separate Node process are not included. Registry-backed API-key validation now uses build-generated probe metadata for supported providers; provider-node validation supports OpenAI-compatible, Anthropic-compatible, and embedding endpoints. Claude and Cursor combo presets are served from build-generated lists; Cursor's live model catalog is not refreshed at runtime. Batch connection tests are available for models with a Rust test adapter; other providers still report that no adapter is available. Tunnel, Tailscale, Headroom, pxpipe, shutdown, and update controls are intentionally outside this port's scope. In the combined Next.js/Rust build, unsupported per-connection quota providers, accounts with custom proxy settings, and upstream quota errors can fall back to the existing Node handler; the standalone Rust service returns a marked `501` for those cases. The current cross-protocol converter handles basic non-streaming chat/messages text and tool calls; streaming conversion, image/audio blocks, and provider-specific protocol variants are not complete. Rust's usage rows currently record request counts and latency, not upstream token usage or cost. Credentials are stored in the shared SQLite database, so protect its data directory.
 
 ## Run locally
 
@@ -35,8 +42,10 @@ To keep Node as the dashboard frontend and route supported APIs and inference re
 | --- | --- | --- |
 | `HOST` | `127.0.0.1` | Listen address |
 | `PORT` | `20127` | Listen port |
-| `DATA_DIR` | `~/.9router` | SQLite database directory |
+| `DATA_DIR` | `~/.9router` | SQLite database and runtime data directory |
+| `NINEROUTER_STATIC_DIR` | unset | Optional directory containing the static frontend export |
 | `NINEROUTER_API_KEY` | unset | Require a bearer key on `/v1/*` and `/admin/*` |
+| `MODEL_CATALOG_SYNC` | enabled | Set to `off` to disable scheduled models.dev updates |
 | `RUST_LOG` | `info` | Log filter |
 
 Without `NINEROUTER_API_KEY`, the service is unauthenticated. Keep it bound to loopback unless you configure authentication and network access controls.

@@ -1,0 +1,3287 @@
+{
+  "alicode-intl": {
+    "name": "Alibaba Coding",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://coding-intl.dashscope.aliyuncs.com/v1/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "alicode": {
+    "name": "Alibaba",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://coding.dashscope.aliyuncs.com/v1/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "anthropic": {
+    "name": "Anthropic",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "imageToText"
+    ],
+    "probe": {
+      "baseUrl": "https://api.anthropic.com/v1/messages",
+      "validateUrl": "",
+      "format": "claude",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "anthropic-version": "2023-06-01",
+        "Anthropic-Beta": "claude-code-20250219,interleaved-thinking-2025-05-14"
+      }
+    }
+  },
+  "antigravity": {
+    "name": "Antigravity",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "image",
+      "webSearch"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "antigravity",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "User-Agent": "antigravity/ide/2.22.0 darwin/arm64"
+      }
+    }
+  },
+  "assemblyai": {
+    "name": "AssemblyAI",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "stt"
+    ],
+    "probe": {
+      "baseUrl": "https://api.assemblyai.com/v1/audio/transcriptions",
+      "validateUrl": "https://api.assemblyai.com/v1/account",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.assemblyai.com/v2/transcript",
+      "method": "POST",
+      "authHeader": "authorization",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "aws-polly": {
+    "name": "AWS Polly",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "tts"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://polly.{region}.amazonaws.com/v1/speech",
+      "method": "POST",
+      "authHeader": "aws-sigv4",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "azure": {
+    "name": "Azure OpenAI",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "black-forest-labs": {
+    "name": "Black Forest Labs",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "image"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.bfl.ai/v1",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "blackbox": {
+    "name": "Blackbox AI",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.blackbox.ai/v1/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "brave-search": {
+    "name": "Brave Search",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "webSearch"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "webProbe": {
+      "baseUrl": "https://api.search.brave.com/res/v1",
+      "method": "GET",
+      "authHeader": "x-subscription-token",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "byteplus": {
+    "name": "BytePlus ModelArk",
+    "category": "freeTier",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://ark.ap-southeast.bytepluses.com/api/coding/v3/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "cartesia": {
+    "name": "Cartesia",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "tts"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.cartesia.ai/tts/bytes",
+      "method": "POST",
+      "authHeader": "x-api-key",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "cerebras": {
+    "name": "Cerebras",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.cerebras.ai/v1/chat/completions",
+      "validateUrl": "https://api.cerebras.ai/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "chutes": {
+    "name": "Chutes AI",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://llm.chutes.ai/v1/chat/completions",
+      "validateUrl": "https://llm.chutes.ai/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "claude": {
+    "name": "Claude Code",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.anthropic.com/v1/messages",
+      "validateUrl": "",
+      "format": "claude",
+      "authHeader": "x-api-key",
+      "authScheme": "raw",
+      "noAuth": false,
+      "headers": {
+        "Anthropic-Version": "2023-06-01",
+        "Anthropic-Beta": "claude-code-20250219,oauth-2025-04-20,interleaved-thinking-2025-05-14,context-management-2025-06-27,prompt-caching-scope-2026-01-05,advanced-tool-use-2025-11-20,effort-2025-11-24,structured-outputs-2025-12-15,fast-mode-2026-02-01,redact-thinking-2026-02-12,token-efficient-tools-2026-03-28",
+        "Anthropic-Dangerous-Direct-Browser-Access": "true",
+        "User-Agent": "claude-cli/2.1.280 (external, sdk-cli)",
+        "X-App": "cli",
+        "X-Stainless-Helper-Method": "stream",
+        "X-Stainless-Retry-Count": "0",
+        "X-Stainless-Runtime-Version": "v24.14.0",
+        "X-Stainless-Package-Version": "0.80.0",
+        "X-Stainless-Runtime": "node",
+        "X-Stainless-Lang": "js",
+        "X-Stainless-Arch": "arm64",
+        "X-Stainless-Os": "MacOS",
+        "X-Stainless-Timeout": "600"
+      }
+    }
+  },
+  "cline": {
+    "name": "Cline",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.cline.bot/api/v1/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "HTTP-Referer": "https://cline.bot",
+        "X-Title": "Cline"
+      }
+    }
+  },
+  "clinepass": {
+    "name": "ClinePass",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.cline.bot/api/v1/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "HTTP-Referer": "https://cline.bot",
+        "X-Title": "Cline"
+      }
+    }
+  },
+  "cloudflare-ai": {
+    "name": "Cloudflare",
+    "category": "freeTier",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "image",
+      "systemone"
+    ],
+    "probe": {
+      "baseUrl": "https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.cloudflare.com/client/v4/accounts",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "codebuddy-cn": {
+    "name": "CodeBuddy CN",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://copilot.tencent.com/v2/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "User-Agent": "CLI/2.108.1 CodeBuddy/2.108.1",
+        "X-Product": "SaaS",
+        "X-IDE-Type": "CLI",
+        "X-IDE-Name": "CLI",
+        "x-requested-with": "XMLHttpRequest",
+        "x-codebuddy-request": "1"
+      }
+    }
+  },
+  "codex": {
+    "name": "OpenAI Codex",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "image"
+    ],
+    "probe": {
+      "baseUrl": "https://chatgpt.com/backend-api/codex/responses",
+      "validateUrl": "",
+      "format": "openai-responses",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "originator": "codex_cli_rs",
+        "User-Agent": "codex_cli_rs/0.159.0",
+        "version": "0.159.0"
+      }
+    }
+  },
+  "cohere": {
+    "name": "Cohere",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.cohere.ai/v1/chat/completions",
+      "validateUrl": "https://api.cohere.ai/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "comfyui": {
+    "name": "ComfyUI",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "image"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "http://localhost:8188",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "commandcode": {
+    "name": "Command Code",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.commandcode.ai/alpha/generate",
+      "validateUrl": "",
+      "format": "commandcode",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "x-command-code-version": "0.25.7",
+        "x-cli-environment": "cli"
+      }
+    }
+  },
+  "coqui": {
+    "name": "Coqui TTS",
+    "category": "freeTier",
+    "authType": "none",
+    "noAuth": true,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "tts"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "http://localhost:5002/api/tts",
+      "method": "POST",
+      "authHeader": "none",
+      "authType": "none",
+      "extraHeaders": {}
+    }
+  },
+  "cursor": {
+    "name": "Cursor IDE",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api2.cursor.sh",
+      "validateUrl": "",
+      "format": "cursor",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "connect-accept-encoding": "gzip",
+        "connect-protocol-version": "1",
+        "Content-Type": "application/connect+proto",
+        "User-Agent": "connect-es/1.6.1"
+      }
+    }
+  },
+  "deepgram": {
+    "name": "Deepgram",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "stt"
+    ],
+    "probe": {
+      "baseUrl": "https://api.deepgram.com/v1/listen",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.deepgram.com/v1/listen",
+      "method": "POST",
+      "authHeader": "token",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "deepseek": {
+    "name": "DeepSeek",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.deepseek.com/chat/completions",
+      "validateUrl": "https://api.deepseek.com/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "edge-tts": {
+    "name": "Edge TTS",
+    "category": "freeTier",
+    "authType": "none",
+    "noAuth": true,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "tts"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "edge-tts",
+      "method": "POST",
+      "authHeader": "none",
+      "authType": "none",
+      "extraHeaders": {}
+    }
+  },
+  "elevenlabs": {
+    "name": "ElevenLabs",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "tts",
+      "stt"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.elevenlabs.io/v1/text-to-speech",
+      "method": "POST",
+      "authHeader": "xi-api-key",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "exa": {
+    "name": "Exa",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "webSearch",
+      "webFetch"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "webProbe": {
+      "baseUrl": "https://api.exa.ai/search",
+      "method": "POST",
+      "authHeader": "x-api-key",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "fal-ai": {
+    "name": "Fal.ai",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "image"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://queue.fal.run",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "featherless": {
+    "name": "Featherless",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.featherless.ai/v1/chat/completions",
+      "validateUrl": "https://api.featherless.ai/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "firecrawl": {
+    "name": "Firecrawl",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "webFetch"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "webProbe": {
+      "baseUrl": "https://api.firecrawl.dev/v1/scrape",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "fireworks": {
+    "name": "Fireworks AI",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "embedding"
+    ],
+    "probe": {
+      "baseUrl": "https://api.fireworks.ai/inference/v1/chat/completions",
+      "validateUrl": "https://api.fireworks.ai/inference/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.fireworks.ai/inference/v1/embeddings",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "gemini-cli": {
+    "name": "Gemini CLI",
+    "category": "free",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://cloudcode-pa.googleapis.com/v1internal",
+      "validateUrl": "",
+      "format": "gemini-cli",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "gemini": {
+    "name": "Gemini",
+    "category": "freeTier",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "embedding",
+      "image",
+      "imageToText",
+      "webSearch",
+      "tts",
+      "stt"
+    ],
+    "probe": {
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/models",
+      "validateUrl": "",
+      "format": "gemini",
+      "authHeader": "x-goog-api-key",
+      "authScheme": "raw",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/models",
+      "method": "POST",
+      "authHeader": "key",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "github": {
+    "name": "GitHub Copilot",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "embedding"
+    ],
+    "probe": {
+      "baseUrl": "https://api.githubcopilot.com/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "copilot-integration-id": "vscode-chat",
+        "editor-version": "vscode/1.110.0",
+        "editor-plugin-version": "copilot-chat/0.38.0",
+        "user-agent": "GitHubCopilotChat/0.38.0",
+        "openai-intent": "conversation-panel",
+        "x-github-api-version": "2025-04-01",
+        "x-vscode-user-agent-library-version": "electron-fetch",
+        "X-Initiator": "user",
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+      }
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.githubcopilot.com/embeddings",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "gitlab": {
+    "name": "GitLab Duo",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://gitlab.com/api/v4/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "glm-cn": {
+    "name": "GLM (China)",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://open.bigmodel.cn/api/coding/paas/v4/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "glm": {
+    "name": "Zai GLM Coding",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "webSearch"
+    ],
+    "probe": {
+      "baseUrl": "https://api.z.ai/api/anthropic/v1/messages",
+      "validateUrl": "",
+      "format": "claude",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "Anthropic-Version": "2023-06-01",
+        "Anthropic-Beta": "claude-code-20250219,interleaved-thinking-2025-05-14"
+      }
+    },
+    "webProbe": {
+      "baseUrl": "https://api.z.ai/api/mcp/web_search_prime/mcp",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "google-pse": {
+    "name": "Google PSE",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "webSearch"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "webProbe": {
+      "baseUrl": "https://www.googleapis.com/customsearch/v1",
+      "method": "GET",
+      "authHeader": "key",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "google-tts": {
+    "name": "Google TTS",
+    "category": "freeTier",
+    "authType": "none",
+    "noAuth": true,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "tts"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "google-tts",
+      "method": "POST",
+      "authHeader": "none",
+      "authType": "none",
+      "extraHeaders": {}
+    }
+  },
+  "grok-cli": {
+    "name": "Grok CLI (Grok Build)",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://cli-chat-proxy.grok.com/v1/responses",
+      "validateUrl": "",
+      "format": "openai-responses",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "User-Agent": "grok-shell/1.0.44 (linux; x86_64)",
+        "x-grok-client-identifier": "grok-shell",
+        "x-grok-client-version": "1.0.44"
+      }
+    }
+  },
+  "grok-web": {
+    "name": "Grok Web (Subscription)",
+    "category": "webCookie",
+    "authType": "cookie",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://grok.com/rest/app-chat/conversations/new",
+      "validateUrl": "",
+      "format": "grok-web",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "groq": {
+    "name": "Groq",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "imageToText",
+      "stt"
+    ],
+    "probe": {
+      "baseUrl": "https://api.groq.com/openai/v1/chat/completions",
+      "validateUrl": "https://api.groq.com/openai/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.groq.com/openai/v1/audio/transcriptions",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "huggingface": {
+    "name": "HuggingFace",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "image",
+      "stt"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://router.huggingface.co/hf-inference/models",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "hyperbolic": {
+    "name": "Hyperbolic",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.hyperbolic.xyz/v1/chat/completions",
+      "validateUrl": "https://api.hyperbolic.xyz/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "iflow": {
+    "name": "iFlow AI",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://apis.iflow.cn/v1/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "User-Agent": "iFlow-Cli"
+      }
+    }
+  },
+  "inworld": {
+    "name": "Inworld TTS",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "tts"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.inworld.ai/tts/v1/voice",
+      "method": "POST",
+      "authHeader": "basic",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "jina-ai": {
+    "name": "Jina AI",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "embedding"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.jina.ai/v1/embeddings",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "jina-reader": {
+    "name": "Jina Reader",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "webFetch"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "webProbe": {
+      "baseUrl": "https://r.jina.ai",
+      "method": "GET",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "kilocode": {
+    "name": "Kilo Code",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.kilo.ai/api/openrouter/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "kimchi": {
+    "name": "Kimchi",
+    "category": "freeTier",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "imageToText"
+    ],
+    "probe": {
+      "baseUrl": "https://llm.kimchi.dev/openai/v1/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "User-Agent": "kimchi/0.1.50"
+      }
+    }
+  },
+  "kimi": {
+    "name": "Kimi",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "webSearch"
+    ],
+    "probe": {
+      "baseUrl": "https://api.kimi.com/coding/v1/messages",
+      "validateUrl": "",
+      "format": "claude",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "Anthropic-Version": "2023-06-01",
+        "Anthropic-Beta": "claude-code-20250219,interleaved-thinking-2025-05-14"
+      }
+    }
+  },
+  "kiro": {
+    "name": "Kiro AI",
+    "category": "free",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://runtime.us-east-1.kiro.dev/generateAssistantResponse",
+      "validateUrl": "",
+      "format": "kiro",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "Content-Type": "application/json",
+        "Accept": "application/vnd.amazon.eventstream",
+        "User-Agent": "AWS-SDK-JS/3.0.0 kiro-ide/1.0.0",
+        "X-Amz-User-Agent": "aws-sdk-js/3.0.0 kiro-ide/1.0.0"
+      }
+    }
+  },
+  "linkup": {
+    "name": "Linkup",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "webSearch"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "webProbe": {
+      "baseUrl": "https://api.linkup.so/v1/search",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "local-device": {
+    "name": "Local Device",
+    "category": "freeTier",
+    "authType": "none",
+    "noAuth": true,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "tts"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "local-device",
+      "method": "POST",
+      "authHeader": "none",
+      "authType": "none",
+      "extraHeaders": {}
+    }
+  },
+  "mimo-free": {
+    "name": "MiMo Code Free",
+    "category": "free",
+    "authType": "apikey",
+    "noAuth": true,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.xiaomimimo.com/api/free-ai/openai/chat",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": true,
+      "headers": {}
+    }
+  },
+  "minimax-cn": {
+    "name": "Minimax (China)",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "tts"
+    ],
+    "probe": {
+      "baseUrl": "https://api.minimaxi.com/anthropic/v1/messages",
+      "validateUrl": "",
+      "format": "claude",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "Anthropic-Version": "2023-06-01",
+        "Anthropic-Beta": "claude-code-20250219,interleaved-thinking-2025-05-14"
+      }
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.minimaxi.com/v1/t2a_v2",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "minimax": {
+    "name": "Minimax Coding",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "image",
+      "imageToText",
+      "webSearch",
+      "tts"
+    ],
+    "probe": {
+      "baseUrl": "https://api.minimax.io/anthropic/v1/messages",
+      "validateUrl": "",
+      "format": "claude",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "Anthropic-Version": "2023-06-01",
+        "Anthropic-Beta": "claude-code-20250219,interleaved-thinking-2025-05-14"
+      }
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.minimax.io/v1/t2a_v2",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "mistral": {
+    "name": "Mistral",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "imageToText",
+      "embedding"
+    ],
+    "probe": {
+      "baseUrl": "https://api.mistral.ai/v1/chat/completions",
+      "validateUrl": "https://api.mistral.ai/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.mistral.ai/v1/embeddings",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "mmf": {
+    "name": "MMF",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": true,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.xiaomimimo.com/api/free-ai/openai/chat",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": true,
+      "headers": {}
+    }
+  },
+  "nanobanana": {
+    "name": "NanoBanana API",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "image"
+    ],
+    "probe": {
+      "baseUrl": "https://api.nanobananaapi.ai/v1/chat/completions",
+      "validateUrl": "https://api.nanobananaapi.ai/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.nanobananaapi.ai/api/v1/nanobanana/generate",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "nebius": {
+    "name": "Nebius AI",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "embedding"
+    ],
+    "probe": {
+      "baseUrl": "https://api.studio.nebius.ai/v1/chat/completions",
+      "validateUrl": "https://api.studio.nebius.ai/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.tokenfactory.nebius.com/v1/embeddings",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "nvidia": {
+    "name": "NVIDIA NIM",
+    "category": "freeTier",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "tts",
+      "embedding"
+    ],
+    "probe": {
+      "baseUrl": "https://integrate.api.nvidia.com/v1/chat/completions",
+      "validateUrl": "https://integrate.api.nvidia.com/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://integrate.api.nvidia.com/v1/audio/speech",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "ollama-local": {
+    "name": "Ollama Local",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "http://localhost:11434/api/chat",
+      "validateUrl": "",
+      "format": "ollama",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "ollama": {
+    "name": "Ollama Cloud",
+    "category": "freeTier",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "webFetch"
+    ],
+    "probe": {
+      "baseUrl": "https://ollama.com/api/chat",
+      "validateUrl": "https://ollama.com/api/tags",
+      "format": "ollama",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "webProbe": {
+      "baseUrl": "https://ollama.com/api/web_fetch",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "ollama-search": {
+    "name": "Ollama Search",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "webSearch"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "webProbe": {
+      "baseUrl": "https://ollama.com/api/web_search",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "qoder-cn": {
+    "name": "Qoder CN",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://gateway.qoder.com.cn/algo/api/v2/service/pro/sse/agent_chat_generation",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "openai": {
+    "name": "OpenAI",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "embedding",
+      "tts",
+      "stt",
+      "image",
+      "imageToText",
+      "webSearch"
+    ],
+    "probe": {
+      "baseUrl": "https://api.openai.com/v1/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.openai.com/v1/audio/speech",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "opencode-go": {
+    "name": "OpenCode Go",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://opencode.ai/zen/go/v1/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "opencode-zen": {
+    "name": "OpenCode Zen",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "systemone"
+    ],
+    "probe": {
+      "baseUrl": "https://opencode.ai/zen/v1/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "opencode": {
+    "name": "OpenCode Free",
+    "category": "free",
+    "authType": "apikey",
+    "noAuth": true,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "systemone"
+    ],
+    "probe": {
+      "baseUrl": "https://opencode.ai",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": true,
+      "headers": {
+        "x-opencode-client": "desktop"
+      }
+    }
+  },
+  "openrouter": {
+    "name": "OpenRouter",
+    "category": "freeTier",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "embedding",
+      "tts",
+      "imageToText",
+      "video",
+      "systemone"
+    ],
+    "probe": {
+      "baseUrl": "https://openrouter.ai/api/v1/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "HTTP-Referer": "https://endpoint-proxy.local",
+        "X-Title": "Endpoint Proxy"
+      }
+    },
+    "mediaProbe": {
+      "baseUrl": "https://openrouter.ai/api/v1/chat/completions",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "perplexity-web": {
+    "name": "Perplexity Web (Pro/Max)",
+    "category": "webCookie",
+    "authType": "cookie",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://www.perplexity.ai/rest/sse/perplexity_ask",
+      "validateUrl": "",
+      "format": "perplexity-web",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "perplexity": {
+    "name": "Perplexity",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "webSearch"
+    ],
+    "probe": {
+      "baseUrl": "https://api.perplexity.ai/chat/completions",
+      "validateUrl": "https://api.perplexity.ai/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "perplexity-agent": {
+    "name": "Perplexity Agent",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "webSearch"
+    ],
+    "probe": {
+      "baseUrl": "https://api.perplexity.ai/v1/responses",
+      "validateUrl": "https://api.perplexity.ai/v1/models",
+      "format": "openai-responses",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "playht": {
+    "name": "PlayHT",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "tts"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.play.ht/api/v2/tts/stream",
+      "method": "POST",
+      "authHeader": "playht",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "qoder": {
+    "name": "Qoder",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api3.qoder.sh/algo/api/v2/service/pro/sse/agent_chat_generation",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "recraft": {
+    "name": "Recraft",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "image"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://external.api.recraft.ai/v1/images/generations",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "runwayml": {
+    "name": "Runway ML",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "image"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.dev.runwayml.com/v1",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "sdwebui": {
+    "name": "SD WebUI",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "image"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "http://localhost:7860/sdapi/v1/txt2img",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "searchapi": {
+    "name": "SearchAPI",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "webSearch"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "webProbe": {
+      "baseUrl": "https://www.searchapi.io/api/v1/search",
+      "method": "GET",
+      "authHeader": "api_key",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "searxng": {
+    "name": "SearXNG",
+    "category": "freeTier",
+    "authType": "none",
+    "noAuth": true,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "webSearch"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "webProbe": {
+      "baseUrl": "http://localhost:8888/search",
+      "method": "GET",
+      "authHeader": "none",
+      "authType": "none",
+      "extraHeaders": {}
+    }
+  },
+  "serper": {
+    "name": "Serper",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "webSearch"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "webProbe": {
+      "baseUrl": "https://google.serper.dev",
+      "method": "POST",
+      "authHeader": "x-api-key",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "siliconflow": {
+    "name": "SiliconFlow",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.siliconflow.com/v1/chat/completions",
+      "validateUrl": "https://api.siliconflow.com/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "stability-ai": {
+    "name": "Stability AI",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "image"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.stability.ai/v2beta/stable-image/generate",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "tavily": {
+    "name": "Tavily",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "webSearch",
+      "webFetch"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "webProbe": {
+      "baseUrl": "https://api.tavily.com/search",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "together": {
+    "name": "Together AI",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "embedding"
+    ],
+    "probe": {
+      "baseUrl": "https://api.together.xyz/v1/chat/completions",
+      "validateUrl": "https://api.together.xyz/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.together.xyz/v1/embeddings",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "topaz": {
+    "name": "Topaz",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "image"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "tortoise": {
+    "name": "Tortoise TTS",
+    "category": "freeTier",
+    "authType": "none",
+    "noAuth": true,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "tts"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "http://localhost:5000/api/tts",
+      "method": "POST",
+      "authHeader": "none",
+      "authType": "none",
+      "extraHeaders": {}
+    }
+  },
+  "venice": {
+    "name": "Venice AI",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "embedding",
+      "image"
+    ],
+    "probe": {
+      "baseUrl": "https://api.venice.ai/api/v1/chat/completions",
+      "validateUrl": "https://api.venice.ai/api/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.venice.ai/api/v1/embeddings",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "vercel-ai-gateway": {
+    "name": "Vercel AI Gateway",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "embedding",
+      "image",
+      "imageToText",
+      "webSearch"
+    ],
+    "probe": {
+      "baseUrl": "https://ai-gateway.vercel.sh/v1/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://ai-gateway.vercel.sh/v1/embeddings",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "vertex-partner": {
+    "name": "Vertex Partner",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://aiplatform.googleapis.com",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "vertex": {
+    "name": "Vertex AI",
+    "category": "freeTier",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "imageToText",
+      "video"
+    ],
+    "probe": {
+      "baseUrl": "https://aiplatform.googleapis.com",
+      "validateUrl": "",
+      "format": "vertex",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://aiplatform.googleapis.com",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "volcengine-ark": {
+    "name": "Volcengine Ark",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://ark.cn-beijing.volces.com/api/coding/v3/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "voyage-ai": {
+    "name": "Voyage AI",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "embedding"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.voyageai.com/v1/embeddings",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "xai": {
+    "name": "xAI (Grok)",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "imageToText",
+      "webSearch",
+      "image",
+      "video"
+    ],
+    "probe": {
+      "baseUrl": "https://api.x.ai/v1/chat/completions",
+      "validateUrl": "https://api.x.ai/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.x.ai/v1/images/generations",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "xiaomi-mimo": {
+    "name": "Xiaomi MiMo",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "tts"
+    ],
+    "probe": {
+      "baseUrl": "https://api.xiaomimimo.com/v1/chat/completions",
+      "validateUrl": "https://api.xiaomimimo.com/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.xiaomimimo.com/v1/chat/completions",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "xiaomi-tokenplan": {
+    "name": "Xiaomi MiMo (Token Plan)",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://token-plan-sgp.xiaomimimo.com/v1/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "youcom": {
+    "name": "You.com Search",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "webSearch"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "webProbe": {
+      "baseUrl": "https://ydc-index.io/v1/search",
+      "method": "GET",
+      "authHeader": "x-api-key",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "alims-intl": {
+    "name": "Alibaba Studio",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "codebuddy-intl": {
+    "name": "CodeBuddy",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://www.codebuddy.ai/v2/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "User-Agent": "IDE/2.108.1 CodeBuddy/2.108.1",
+        "X-Product": "SaaS",
+        "X-IDE-Type": "IDE",
+        "X-IDE-Name": "IDE",
+        "x-requested-with": "XMLHttpRequest",
+        "x-codebuddy-request": "1"
+      }
+    }
+  },
+  "zed": {
+    "name": "Zed",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://cloud.zed.dev/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "content-type": "application/json"
+      }
+    }
+  },
+  "api-airforce": {
+    "name": "API.airforce",
+    "category": "freeTier",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.airforce/v1/chat/completions",
+      "validateUrl": "https://api.airforce/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "HTTP-Referer": "https://endpoint-proxy.local",
+        "X-Title": "Endpoint Proxy"
+      }
+    }
+  },
+  "baidu": {
+    "name": "Baidu Qianfan",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://qianfan.baidubce.com/v2/chat/completions",
+      "validateUrl": "https://qianfan.baidubce.com/v2/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "bazaarlink": {
+    "name": "Bazaarlink",
+    "category": "freeTier",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://bazaarlink.ai/api/v1/chat/completions",
+      "validateUrl": "https://bazaarlink.ai/api/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "bluesminds": {
+    "name": "BluesMinds",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.bluesminds.com/v1/chat/completions",
+      "validateUrl": "https://api.bluesminds.com/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "kilo-gateway": {
+    "name": "Kilo Gateway",
+    "category": "freeTier",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.kilo.ai/api/gateway/chat/completions",
+      "validateUrl": "https://api.kilo.ai/api/gateway/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "llm7": {
+    "name": "LLM7",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.llm7.io/v1/chat/completions",
+      "validateUrl": "https://api.llm7.io/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "sambanova": {
+    "name": "SambaNova",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.sambanova.ai/v1/chat/completions",
+      "validateUrl": "https://api.sambanova.ai/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "tencent": {
+    "name": "Tencent Hunyuan",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.hunyuan.cloud.tencent.com/v1/chat/completions",
+      "validateUrl": "https://api.hunyuan.cloud.tencent.com/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "morph": {
+    "name": "Morph",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.morphllm.com/v1/chat/completions",
+      "validateUrl": "https://api.morphllm.com/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "poolside": {
+    "name": "Poolside",
+    "category": "freeTier",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://inference.poolside.ai/v1/chat/completions",
+      "validateUrl": "https://inference.poolside.ai/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "tokenrouter": {
+    "name": "TokenRouter",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "embedding",
+      "image"
+    ],
+    "probe": {
+      "baseUrl": "https://api.tokenrouter.com/v1/chat/completions",
+      "validateUrl": "https://api.tokenrouter.com/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.tokenrouter.com/v1/embeddings",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "selfhosted-stt": {
+    "name": "Self-hosted STT",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "stt"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "http://localhost:8080/v1/audio/transcriptions",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "selfhosted-tts": {
+    "name": "Self-hosted TTS",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "tts"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "http://localhost:8880",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "selfhosted-embedding": {
+    "name": "Self-hosted Embedding",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "embedding"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "http://localhost:8080/v1/embeddings",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "fish-audio": {
+    "name": "Fish Audio",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "tts"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "mediaProbe": {
+      "baseUrl": "https://api.fish.audio/v1/tts",
+      "method": "POST",
+      "authHeader": "bearer",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "alitp-intl": {
+    "name": "Alibaba Token Plan",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "xquik": {
+    "name": "Xquik",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "webSearch"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "webProbe": {
+      "baseUrl": "https://xquik.com/api/v1/credits",
+      "method": "GET",
+      "authHeader": "x-api-key",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "tokenharbor": {
+    "name": "Token Harbor",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://tokenharbor.ai/v1/chat/completions",
+      "validateUrl": "https://tokenharbor.ai/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "dahl": {
+    "name": "Dahl Inference",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://inference.dahl.global/v1/chat/completions",
+      "validateUrl": "https://inference.dahl.global/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "atria": {
+    "name": "Atria Dawn",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.atria-asi.ai/v1/chat/completions",
+      "validateUrl": "https://api.atria-asi.ai/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "agnes": {
+    "name": "Agnes AI",
+    "category": "freeTier",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://apihub.agnes-ai.com/v1/chat/completions",
+      "validateUrl": "https://apihub.agnes-ai.com/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "bai": {
+    "name": "B.AI",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.b.ai/v1/chat/completions",
+      "validateUrl": "https://api.b.ai/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "tinyfish": {
+    "name": "TinyFish",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "webSearch",
+      "webFetch"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    },
+    "webProbe": {
+      "baseUrl": "https://api.search.tinyfish.ai/usage?limit=1",
+      "method": "GET",
+      "authHeader": "x-api-key",
+      "authType": "apikey",
+      "extraHeaders": {}
+    }
+  },
+  "v1m": {
+    "name": "v1m (System One)",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "systemone"
+    ],
+    "probe": {
+      "baseUrl": "",
+      "validateUrl": "",
+      "format": "",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "muse": {
+    "name": "Muse (Meta Model API)",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://api.meta.ai/v1/chat/completions",
+      "validateUrl": "https://api.meta.ai/v1/models",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "minimax-code": {
+    "name": "MiniMax Code",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://agent.minimax.cn/mavis/api/v1/llm/v1/messages",
+      "validateUrl": "",
+      "format": "claude",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "User-Agent": "MiniMaxAgent",
+        "X-Mavis-Agent-Id": "main"
+      }
+    }
+  },
+  "minimax-code-global": {
+    "name": "MiniMax Code (Global)",
+    "category": "oauth",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://agent.minimax.io/mavis/api/v1/llm/v1/messages",
+      "validateUrl": "",
+      "format": "claude",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {
+        "User-Agent": "MiniMaxAgent",
+        "X-Mavis-Agent-Id": "main"
+      }
+    }
+  },
+  "bedrock": {
+    "name": "AWS Bedrock",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": "aws",
+    "apiKeyOptionalWith": "profile",
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://bedrock-runtime.{region}.amazonaws.com",
+      "validateUrl": "",
+      "format": "claude",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "bedrock-xai": {
+    "name": "AWS Bedrock (xAI)",
+    "category": "apikey",
+    "authType": "apikey",
+    "noAuth": false,
+    "credentialForm": "aws",
+    "apiKeyOptionalWith": "profile",
+    "serviceKinds": [
+      "llm"
+    ],
+    "probe": {
+      "baseUrl": "https://bedrock-runtime.{region}.amazonaws.com",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  },
+  "nous": {
+    "name": "Nous Research",
+    "category": "freeTier",
+    "authType": "oauth",
+    "noAuth": false,
+    "credentialForm": null,
+    "apiKeyOptionalWith": null,
+    "serviceKinds": [
+      "llm",
+      "imageToText"
+    ],
+    "probe": {
+      "baseUrl": "https://inference-api.nousresearch.com/v1/chat/completions",
+      "validateUrl": "",
+      "format": "openai",
+      "authHeader": "bearer",
+      "authScheme": "bearer",
+      "noAuth": false,
+      "headers": {}
+    }
+  }
+}

@@ -1,3 +1,5 @@
+export const dynamic = "force-static";
+
 export default function manifest() {
   return {
     name: '9Router - AI Infrastructure Management',

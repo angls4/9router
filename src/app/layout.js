@@ -3,13 +3,7 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import "material-symbols/outlined.css";
 import "./globals.css";
 import { ThemeProvider } from "@/shared/components/ThemeProvider";
-import "@/lib/network/initOutboundProxy"; // Auto-initialize outbound proxy env
-import "@/shared/services/bootstrap"; // Auto-run initializeApp (watchdog, auto-resume tunnel)
-import { initConsoleLogCapture } from "@/lib/consoleLogBuffer";
 import { RuntimeI18nProvider } from "@/i18n/RuntimeI18nProvider";
-
-// Hook console immediately at module load time (server-side only, runs once)
-initConsoleLogCapture();
 
 const inter = Inter({
   subsets: ["latin"],
@@ -28,7 +22,16 @@ export const viewport = {
   themeColor: "#0a0a0a",
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  // Static frontend builds are served by the Rust process, so they must not
+  // initialize Node-only services or background workers while rendering pages.
+  if (process.env.NINEROUTER_STATIC_BUILD !== "true") {
+    await import("@/lib/network/initOutboundProxy");
+    await import("@/shared/services/bootstrap");
+    const { initConsoleLogCapture } = await import("@/lib/consoleLogBuffer");
+    initConsoleLogCapture();
+  }
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>

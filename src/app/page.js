@@ -1,5 +1,11 @@
-import { redirect } from "next/navigation";
+"use client";
+
+import { useEffect } from "react";
 
 export default function InitPage() {
-  redirect('/dashboard');
+  useEffect(() => {
+    window.location.replace("/dashboard/");
+  }, []);
+
+  return <main className="p-8 text-sm text-text-muted">Opening dashboard...</main>;
 }

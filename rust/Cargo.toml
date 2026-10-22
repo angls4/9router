@@ -11,6 +11,7 @@ path = "src/main.rs"
 
 [dependencies]
 axum = { version = "0.8", features = ["macros"] }
+base64 = "0.22"
 bytes = "1"
 bcrypt = "0.17"
 chrono = { version = "0.4", features = ["serde"] }
@@ -29,3 +30,4 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 uuid = { version = "1", features = ["v4"] }
 sha2 = "0.10"
+jsonwebtoken = { version = "9", default-features = false }

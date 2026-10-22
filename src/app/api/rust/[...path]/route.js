@@ -1,4 +1,9 @@
 import { NextResponse } from "next/server";
+import { GET as getNodeUsage } from "../../usage/[connectionId]/route.js";
+import {
+  GET as getNodeCodexResetCredits,
+  POST as postNodeCodexResetCredits,
+} from "../../usage/[connectionId]/codex-reset-credits/route.js";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -32,6 +37,44 @@ async function forward(request, context) {
       redirect: "manual",
       cache: "no-store",
     });
+    if (
+      response.status === 501 &&
+      response.headers.get("x-9router-fallback") === "node" &&
+      request.method === "POST" &&
+      path[0] === "api" &&
+      path[1] === "usage" &&
+      path.length === 4 &&
+      path[3] === "codex-reset-credits"
+    ) {
+      return postNodeCodexResetCredits(request, {
+        params: Promise.resolve({ connectionId: path[2] }),
+      });
+    }
+    if (
+      response.status === 501 &&
+      response.headers.get("x-9router-fallback") === "node" &&
+      request.method === "GET" &&
+      path[0] === "api" &&
+      path[1] === "usage" &&
+      path.length === 4 &&
+      path[3] === "codex-reset-credits"
+    ) {
+      return getNodeCodexResetCredits(request, {
+        params: Promise.resolve({ connectionId: path[2] }),
+      });
+    }
+    if (
+      response.status === 501 &&
+      response.headers.get("x-9router-fallback") === "node" &&
+      request.method === "GET" &&
+      path[0] === "api" &&
+      path[1] === "usage" &&
+      path.length === 3
+    ) {
+      return getNodeUsage(request, {
+        params: Promise.resolve({ connectionId: path[2] }),
+      });
+    }
     const responseHeaders = new Headers(response.headers);
     for (const name of HOP_BY_HOP) responseHeaders.delete(name);
     return new Response(response.body, {

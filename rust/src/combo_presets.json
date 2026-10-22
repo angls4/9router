@@ -1,0 +1,168 @@
+{
+  "cursor": [
+    {
+      "name": "default",
+      "models": [
+        "cu/default"
+      ]
+    },
+    {
+      "name": "claude-4.5-opus-high-thinking",
+      "models": [
+        "cu/claude-4.5-opus-high-thinking"
+      ]
+    },
+    {
+      "name": "claude-4.5-opus-high",
+      "models": [
+        "cu/claude-4.5-opus-high"
+      ]
+    },
+    {
+      "name": "claude-4.5-sonnet-thinking",
+      "models": [
+        "cu/claude-4.5-sonnet-thinking"
+      ]
+    },
+    {
+      "name": "claude-4.5-sonnet",
+      "models": [
+        "cu/claude-4.5-sonnet"
+      ]
+    },
+    {
+      "name": "claude-4.5-haiku",
+      "models": [
+        "cu/claude-4.5-haiku"
+      ]
+    },
+    {
+      "name": "claude-4.5-opus",
+      "models": [
+        "cu/claude-4.5-opus"
+      ]
+    },
+    {
+      "name": "gpt-5.2-codex",
+      "models": [
+        "cu/gpt-5.2-codex"
+      ]
+    },
+    {
+      "name": "claude-4.6-opus-max",
+      "models": [
+        "cu/claude-4.6-opus-max"
+      ]
+    },
+    {
+      "name": "claude-4.6-sonnet-medium-thinking",
+      "models": [
+        "cu/claude-4.6-sonnet-medium-thinking"
+      ]
+    },
+    {
+      "name": "kimi-k2.5",
+      "models": [
+        "cu/kimi-k2.5"
+      ]
+    },
+    {
+      "name": "gemini-3-flash-preview",
+      "models": [
+        "cu/gemini-3-flash-preview"
+      ]
+    },
+    {
+      "name": "gpt-5.2",
+      "models": [
+        "cu/gpt-5.2"
+      ]
+    },
+    {
+      "name": "gpt-5.3-codex",
+      "models": [
+        "cu/gpt-5.3-codex"
+      ]
+    }
+  ],
+  "claude": [
+    {
+      "name": "claude-opus-5-5",
+      "models": [
+        "cc/claude-opus-5-5"
+      ]
+    },
+    {
+      "name": "claude-opus-5",
+      "models": [
+        "cc/claude-opus-5"
+      ]
+    },
+    {
+      "name": "claude-fable-5-1",
+      "models": [
+        "cc/claude-fable-5-1"
+      ]
+    },
+    {
+      "name": "claude-fable-5",
+      "models": [
+        "cc/claude-fable-5"
+      ]
+    },
+    {
+      "name": "claude-sonnet-5-5",
+      "models": [
+        "cc/claude-sonnet-5-5"
+      ]
+    },
+    {
+      "name": "claude-sonnet-5",
+      "models": [
+        "cc/claude-sonnet-5"
+      ]
+    },
+    {
+      "name": "claude-haiku-4-5-20251001",
+      "models": [
+        "cc/claude-haiku-4-5-20251001"
+      ]
+    },
+    {
+      "name": "fable",
+      "models": [
+        "cc/claude-fable-5"
+      ]
+    },
+    {
+      "name": "opus",
+      "models": [
+        "cc/claude-opus-5"
+      ]
+    },
+    {
+      "name": "sonnet",
+      "models": [
+        "cc/claude-sonnet-5"
+      ]
+    },
+    {
+      "name": "haiku",
+      "models": [
+        "cc/claude-haiku-4-5-20251001"
+      ]
+    },
+    {
+      "name": "default",
+      "models": [
+        "cc/claude-sonnet-5"
+      ]
+    },
+    {
+      "name": "opusplan",
+      "models": [
+        "cc/claude-opus-5"
+      ]
+    }
+  ]
+}

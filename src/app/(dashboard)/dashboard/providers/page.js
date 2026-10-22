@@ -693,6 +693,16 @@ export default function ProvidersPage() {
   );
 }
 
+function providerDetailHref(providerId) {
+  if (
+    providerId.startsWith(OPENAI_COMPATIBLE_PREFIX) ||
+    providerId.startsWith(ANTHROPIC_COMPATIBLE_PREFIX)
+  ) {
+    return `/dashboard/providers/custom?providerId=${encodeURIComponent(providerId)}`;
+  }
+  return `/dashboard/providers/${providerId}`;
+}
+
 function ProviderCard({ providerId, provider, stats, authType, onToggle }) {
   const { connected, error, errorCode, errorTime, allDisabled } = stats;
   const isNoAuth = !!provider.noAuth;
@@ -711,7 +721,7 @@ function ProviderCard({ providerId, provider, stats, authType, onToggle }) {
   };
 
   return (
-    <Link href={`/dashboard/providers/${providerId}`} className="group min-w-0">
+    <Link href={providerDetailHref(providerId)} className="group min-w-0">
       <Card
         padding="xs"
         className={`h-full hover:bg-black/[0.01] dark:hover:bg-white/[0.01] transition-colors cursor-pointer ${allDisabled ? "opacity-50" : ""}`}
@@ -839,7 +849,7 @@ function ApiKeyProviderCard({
   };
 
   return (
-    <Link href={`/dashboard/providers/${providerId}`} className="group min-w-0">
+    <Link href={providerDetailHref(providerId)} className="group min-w-0">
       <Card
         padding="xs"
         className={`h-full hover:bg-black/[0.01] dark:hover:bg-white/[0.01] transition-colors cursor-pointer ${allDisabled ? "opacity-50" : ""}`}

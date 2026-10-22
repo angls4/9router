@@ -41,6 +41,12 @@ fn registry_provider(id: &str) -> Option<&'static RegistryProvider> {
         .find(|provider| provider.id == id || provider.aliases.iter().any(|alias| alias == id))
 }
 
+pub fn canonical_provider_id(id: &str) -> &str {
+    registry_provider(id)
+        .map(|provider| provider.id.as_str())
+        .unwrap_or(id)
+}
+
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProviderInput {
